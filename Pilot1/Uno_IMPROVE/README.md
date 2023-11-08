@@ -13,6 +13,8 @@
 
 In order to run the modified version of the code, you need to run the following commands:
 ```
+export IMPROVE_DATA_DIR=<UNO_PATH>csa_data or other as per desired directory
+export PYTHONPATH=<IMPROVE_LIBRARY>/:$PYTHONPATH 
 python uno_preprocess.py
 python uno_train.py
 python uno_infer.py
