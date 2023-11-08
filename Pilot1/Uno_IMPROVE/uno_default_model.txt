@@ -46,3 +46,14 @@ ckpt_save_interval=1
 
 [Monitor_Params]
 timeout=-1
+
+[Preprocess]
+ml_data_outdir = "./ml_data"
+x_data_canc_files = [["cancer_gene_expression.tsv", ["Gene_Symbol"]]]
+x_data_drug_files = [["drug_SMILES.tsv"]]
+y_data_files = [["response.tsv"]]
+train_split_file = "gCSI_split_0_train.txt"
+val_split_file = "gCSI_split_0_val.txt"
+test_split_file = "gCSI_split_0_test.txt"
+use_lincs = True
+scaling = "std"
