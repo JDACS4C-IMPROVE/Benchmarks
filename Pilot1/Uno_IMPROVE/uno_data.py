@@ -32,9 +32,9 @@ DATA_URL = "https://web.cels.anl.gov/projects/IMPROVE_FTP/candle/public/benchmar
 logger = logging.getLogger(__name__)
 
 
-def get_file(url):
+def get_file(url, cache_subdir="Pilot1"):
     fname = os.path.basename(url)
-    return candle.get_file(fname, origin=url, cache_subdir="Pilot1")
+    return candle.get_file(fname, origin=url, cache_subdir=cache_subdir)
 
 
 def read_IDs_file(fname):
@@ -245,37 +245,55 @@ def load_combo_dose_response(fraction=True):
 def load_aggregated_single_response(
     target="AUC", min_r2_fit=0.3, max_ec50_se=3, combo_format=False, rename=True
 ):
-    path = get_file(DATA_URL + "combined_single_response_agg")
+    base_url = 'https://ftp.mcs.anl.gov/pub/candle/public/improve/IMP_data/'
+    datasets = ['ccle', 'ctrp', 'gcsi', 'gdsc1', 'gdsc2']
+    end_url = '/y_data/rsp_full.csv'
 
-    df = global_cache.get(path)
-    if df is None:
-        df = pd.read_csv(
-            path,
-            engine="c",
-            sep="\t",
-            dtype={
-                "SOURCE": str,
-                "CELL": str,
-                "DRUG": str,
-                "STUDY": str,
-                "AUC": np.float32,
-                "IC50": np.float32,
-                "EC50": np.float32,
-                "EC50se": np.float32,
-                "R2fit": np.float32,
-                "Einf": np.float32,
-                "HS": np.float32,
-                "AAC1": np.float32,
-                "AUC1": np.float32,
-                "DSS1": np.float32,
-            },
-        )
-        global_cache[path] = df
+    dfs = []  # List to store DataFrames from each URL
+
+    for dataset in datasets:
+        url = f'{base_url}data.{dataset}{end_url}'
+        cache_subdir = f'Pilot1/{dataset}'  # Specific cache subdir for each dataset
+        print("Downloading from:", url)
+        path = get_file(url, cache_subdir)
+        print("Path:", path)
+        df_cached = global_cache.get(path)
+
+        if df_cached is None:
+            df = pd.read_csv(
+                path,
+                engine="c",
+                sep=',',
+                dtype={
+                    "SOURCE": str,
+                    "CELL": str,
+                    "DRUG": str,
+                    "AUC": np.float32,
+                    "IC50": np.float32,
+                    "EC50": np.float32,
+                    "EC50se": np.float32,
+                    "R2fit": np.float32,
+                    "Einf": np.float32,
+                    "HS": np.float32,
+                    "AAC1": np.float32,
+                    "AUC1": np.float32,
+                    "DSS1": np.float32,
+                    "AUC_bin": int,
+                },
+            )
+            global_cache[path] = df
+
+        dfs.append(df)
+
+    # Concatenate all DataFrames
+    df = pd.concat(dfs, ignore_index=True)
 
     total = len(df)
 
     df = df[(df["R2fit"] >= min_r2_fit) & (df["EC50se"] <= max_ec50_se)]
-    df = df[["SOURCE", "CELL", "DRUG", target, "STUDY"]]
+    df = df.rename(columns={'CancID': 'CELL', 'DrugID': 'DRUG'})
+    df['SOURCE'] = df['SOURCE'].str.upper()
+    df = df[["SOURCE", "CELL", "DRUG", target]]
     df = df[~df[target].isnull()]
 
     logger.info(
@@ -290,7 +308,7 @@ def load_aggregated_single_response(
         df = df.rename(columns={"DRUG": "DRUG1"})
         df["DRUG2"] = np.nan
         df["DRUG2"] = df["DRUG2"].astype(object)
-        df = df[["SOURCE", "CELL", "DRUG1", "DRUG2", target, "STUDY"]]
+        df = df[["SOURCE", "CELL", "DRUG1", "DRUG2", target]]
         if rename:
             df = df.rename(
                 columns={
@@ -298,7 +316,6 @@ def load_aggregated_single_response(
                     "CELL": "Sample",
                     "DRUG1": "Drug1",
                     "DRUG2": "Drug2",
-                    "STUDY": "Study",
                 }
             )
     else:
@@ -308,10 +325,12 @@ def load_aggregated_single_response(
                     "SOURCE": "Source",
                     "CELL": "Sample",
                     "DRUG": "Drug",
-                    "STUDY": "Study",
                 }
             )
 
+    print("df Source Value Counts:")
+    print(df['Source'].value_counts())
+    print("df Shape:", df.shape)
     return df
 
 
