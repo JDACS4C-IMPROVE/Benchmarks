@@ -11,6 +11,7 @@ import candle
 logger = logging.getLogger(__name__)
 candle.set_parallelism_threads()
 
+
 class BenchmarkUno(candle.Benchmark):
     def set_locals(self):
         """Functionality to set variables specific for the benchmark
