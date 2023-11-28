@@ -103,17 +103,21 @@ def run(params):
 
     # Load the responses file into a DataFrame
     rsp_dataframes = []
+    i=0
     for filename in params.get('y_data_files', []):
-        file_path = os.path.join(directory, filename)
+        response_path="raw_data/y_data/"+str(filename[i])
+        file_path = os.path.join(directory, response_path)
         df = pd.read_csv(file_path)
         # Add to dataframe
         rsp_dataframes.append(df)
+        i+=1
 
     # Merge dataframe
     rsp_df = rsp_dataframes[0]  # start with the first dataframe
     for df in rsp_dataframes[1:]:
         rsp_df = pd.merge(rsp_df, df, on=["CancID", "DrugID"], how="inner")
     # Select the desired metric out
+    print(rsp_df.columns)
     rsp_df = rsp_df[['CancID', 'DrugID', 'AUC']]
     # Do Multi-indexing of columns
     id_columns = [('ID', 'CancID'), ('ID', 'DrugID')]

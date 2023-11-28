@@ -598,6 +598,26 @@ def run(params):
             description="Between random pairs in y_val:",
         )
 
+        # Preproces:
+        # use omicsloader drugsloder to make x_train_list, y_train call for all train test and val
+        # save files train.tsv, test.tsv, val.tsv
+        
+        # train:
+        # load train.tsv/val.tsv and model.fit
+        # save the model.h5
+        
+        # infer: loads model.h5
+        # load test.tsv and model.predict
+        
+        
+        # HOW CSA:
+        # source_names = ['NCI60', 'CTRP', 'GDSC', 'gCSI']
+        # splits
+        # split file names
+        # pass to preprocess created split file names
+        # loader gets a split file name
+        
+
         if args.no_gen:
             x_train_list, y_train = train_gen.get_slice(
                 size=train_gen.size, single=args.single
