@@ -1,12 +1,10 @@
 """Functionality for IMPROVE data handling."""
 
-from pathlib import Path
-
-from typing import Dict, List, Optional, Tuple, Union
-
 import pandas as pd
 
 import os
+
+from IMPROVE.improve.dataloader import get_common_samples, scale_df
 
 from sklearn.preprocessing import (
     StandardScaler,
@@ -14,112 +12,6 @@ from sklearn.preprocessing import (
     MinMaxScaler,
     RobustScaler,
 )
-
-
-def get_common_samples(
-    df1: pd.DataFrame, df2: pd.DataFrame, ref_col: str
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Search for common data in reference column and retain only .
-
-    Args:
-        df1, df2 (pd.DataFrame): dataframes
-        ref_col (str): the ref column to find the common values
-
-    Returns:
-        df1, df2 after filtering for common data.
-
-    Example:
-        Before:
-
-        df1:
-        col1	ref_col	    col3	    col4
-        CCLE	ACH-000956	Drug_749	0.7153
-        CCLE	ACH-000325	Drug_1326	0.9579
-        CCLE	ACH-000475	Drug_490	0.213
-
-        df2:
-        ref_col     col2                col3                col4
-        ACH-000956  3.5619370596224327	0.0976107966264223	4.888499735514123
-        ACH-000179  5.202025844609336	3.5046203924035524	3.5058909297299574
-        ACH-000325  6.016139702655253	0.6040713236688608	0.0285691521967709
-
-        After:
-
-        df1:
-        col1	ref_col	    col3	    col4
-        CCLE	ACH-000956	Drug_749	0.7153
-        CCLE	ACH-000325	Drug_1326	0.9579
-
-        df2:
-        ref_col     col2                col3                col4
-        ACH-000956  3.5619370596224327	0.0976107966264223	4.888499735514123
-        ACH-000325  6.016139702655253	0.6040713236688608	0.0285691521967709
-    """
-    # Retain df1 and df2 samples with common ref_col
-    common_ids = list(set(df1[ref_col]).intersection(df2[ref_col]))
-    df1 = df1[df1[ref_col].isin(common_ids)].reset_index(drop=True)
-    df2 = df2[df2[ref_col].isin(common_ids)].reset_index(drop=True)
-    return df1, df2
-
-
-def scale_df(df, scaler_name: str = "std", scaler=None, verbose: bool = False):
-    """Returns a dataframe with scaled data.
-
-    It can create a new scaler or use the scaler passed or return the
-    data as it is. If `scaler_name` is None, no scaling is applied. If
-    `scaler` is None, a new scaler is constructed. If `scaler` is not
-    None, and `scaler_name` is not None, the scaler passed is used for
-    scaling the data frame.
-
-    Args:
-        df: Pandas dataframe to scale.
-        scaler_name: Name of scikit learn scaler to apply. Options:
-                     ["minabs", "minmax", "std", "none"]. Default: std
-                     standard scaling.
-        scaler: Scikit object to use, in case it was created already.
-                Default: None, create scikit scaling object of
-                specified type.
-        verbose: Flag specifying if verbose message printing is desired.
-                 Default: False, no verbose print.
-
-    Returns:
-        pd.Dataframe: dataframe that contains drug response values.
-        scaler: Scikit object used for scaling.
-    """
-    if scaler_name is None or scaler_name == "none":
-        if verbose:
-            print("Scaler is None (no df scaling).")
-        return df, None
-
-    # Scale data
-    # Select only numerical columns in data frame
-    df_num = df.select_dtypes(include="number")
-
-    if scaler is None:  # Create scikit scaler object
-        if scaler_name == "std":
-            scaler = StandardScaler()
-        elif scaler_name == "minmax":
-            scaler = MinMaxScaler()
-        elif scaler_name == "minabs":
-            scaler = MaxAbsScaler()
-        elif scaler_name == "robust":
-            scaler = RobustScaler()
-        else:
-            print(
-                f"The specified scaler ({scaler_name}) is not implemented (no df scaling)."
-            )
-            return df, None
-
-        # Scale data according to new scaler
-        df_norm = scaler.fit_transform(df_num)
-    else:  # Apply passed scikit scaler
-        # Scale data according to specified scaler
-        df_norm = scaler.transform(df_num)
-
-    # Copy back scaled data to data frame
-    df[df_num.columns] = df_norm
-    return df
 
 
 def convert_to_multilevel(df, id_cols, level_name):
@@ -189,27 +81,45 @@ def merge_multilevel_dataframe(gene_df, drug_df, response_df):
     return merged_df
 
 
-directory = "/mnt/c/Users/rylie/Coding/UNO/Benchmarks/Pilot1/Uno_IMPROVE/ml_data/"  # This should use CANDLE_DATA_DIR
+def merge_file_list(file_list, directory, merge_on):
+    merged_df = pd.DataFrame()
+    for filename in file_list:
+        filepath = os.path.join(directory, filename)
+        df = pd.read_parquet(filepath)
+        if merged_df.empty:
+            merged_df = df
+        else:
+            merged_df = pd.merge(merged_df, df, on=merge_on, how="inner")
+    return merged_df
 
-gene_file = file_path = os.path.join(directory, "ge.csv")
-gene_df = pd.read_csv(gene_file)
-gene_df = scale_df(gene_df, scaler_name="std")
-# print(gene_df.head())
-# print(gene_df.shape)
+
+# Set IMPROVE_DATA_DIR
+if os.getenv("IMPROVE_DATA_DIR") is None:
+    raise Exception(
+        "ERROR ! Required system variable not specified.  \
+                    You must define IMPROVE_DATA_DIR ... Exiting.\n"
+    )
+os.environ["CANDLE_DATA_DIR"] = os.environ["IMPROVE_DATA_DIR"]
+
+
+directory = os.getenv(CANDLE_DATA_DIR)
+x_data_canc_files = ["ge.parquet"]
+x_data_drug_files = ["mordred.parquet", "ecfp2.parquet"]
+y_data_files = ["rsp_full.parquet"]
+
+gene_df = merge_file_list(x_data_canc_files, directory, "CancID")
 # gene_df = gene_df[["CancID", "ge_A1BG", "ge_A1CF"]]
-
-drug_file = file_path = os.path.join(directory, "mordred.csv")
-drug_df = pd.read_csv(drug_file)
-drug_df = scale_df(drug_df, scaler_name="std")
-# print(drug_df.head())
-# print(drug_df.shape)
+print(gene_df.head())
+drug_df = merge_file_list(x_data_drug_files, directory, "DrugID")
 # drug_df = drug_df[["DrugID", "mordred_ABC", "mordred_ABCGG"]]
-
-response_file = file_path = os.path.join(directory, "rsp_full.csv")
-response_df = pd.read_csv(response_file)
+print(drug_df.head())
+response_df = merge_file_list(y_data_files, directory, ["CancID", "DrugID"])
 response_df = response_df[["CancID", "DrugID", "AUC"]]
-# print(response_df.head())
-# print(response_df.shape)
+print(response_df.head())
+
+# Scale Data
+gene_df, _ = scale_df(gene_df, scaler_name="std")
+drug_df, _ = scale_df(drug_df, scaler_name="std")
 
 # Ensure Common Samples
 gene_df, response_df = get_common_samples(gene_df, response_df, "CancID")
@@ -221,9 +131,6 @@ drug_df = convert_to_multilevel(drug_df, ["DrugID"], "drug_info")
 response_df = convert_to_multilevel(
     response_df, ["CancID", "DrugID"], "response_values"
 )
-# print(gene_df.head())
-# print(drug_df.head())
-# print(response_df.head())
 
 # Merge multilevel dataframes
 processed_df = merge_multilevel_dataframe(gene_df, drug_df, response_df)
