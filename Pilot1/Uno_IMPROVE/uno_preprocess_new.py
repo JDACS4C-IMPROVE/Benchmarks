@@ -6,13 +6,6 @@ import os
 
 from IMPROVE.improve.dataloader import get_common_samples, scale_df
 
-from sklearn.preprocessing import (
-    StandardScaler,
-    MaxAbsScaler,
-    MinMaxScaler,
-    RobustScaler,
-)
-
 
 def convert_to_multilevel(df, id_cols, level_name):
     # Create multi-level id columns
