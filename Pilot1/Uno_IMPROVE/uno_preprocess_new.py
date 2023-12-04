@@ -4,7 +4,7 @@ import pandas as pd
 
 import os
 
-from IMPROVE.improve.dataloader import get_common_samples, scale_df
+from improve.dataloader import get_common_samples, scale_df
 
 
 def convert_to_multilevel(df, id_cols, level_name):
@@ -78,7 +78,7 @@ def merge_file_list(file_list, directory, merge_on):
     merged_df = pd.DataFrame()
     for filename in file_list:
         filepath = os.path.join(directory, filename)
-        df = pd.read_parquet(filepath)
+        df = pd.read_csv(filepath)
         if merged_df.empty:
             merged_df = df
         else:
@@ -92,13 +92,14 @@ if os.getenv("IMPROVE_DATA_DIR") is None:
         "ERROR ! Required system variable not specified.  \
                     You must define IMPROVE_DATA_DIR ... Exiting.\n"
     )
-os.environ["CANDLE_DATA_DIR"] = os.environ["IMPROVE_DATA_DIR"]
+# os.environ["CANDLE_DATA_DIR"] = os.environ["IMPROVE_DATA_DIR"]
 
 
-directory = os.getenv(CANDLE_DATA_DIR)
-x_data_canc_files = ["ge.parquet"]
-x_data_drug_files = ["mordred.parquet", "ecfp2.parquet"]
-y_data_files = ["rsp_full.parquet"]
+directory = os.getenv("IMPROVE_DATA_DIR")
+directory = os.path.join(directory, "raw_data", "x_data")
+x_data_canc_files = ["cancer_gene_expression.tsv"]
+x_data_drug_files = ["drug_mordred.tsv"]
+y_data_files = ["response.tsv"]
 
 gene_df = merge_file_list(x_data_canc_files, directory, "CancID")
 # gene_df = gene_df[["CancID", "ge_A1BG", "ge_A1CF"]]
@@ -106,8 +107,12 @@ print(gene_df.head())
 drug_df = merge_file_list(x_data_drug_files, directory, "DrugID")
 # drug_df = drug_df[["DrugID", "mordred_ABC", "mordred_ABCGG"]]
 print(drug_df.head())
+
+directory = os.getenv("IMPROVE_DATA_DIR")
+directory = os.path.join(directory, "raw_data", "y_data")
+
 response_df = merge_file_list(y_data_files, directory, ["CancID", "DrugID"])
-response_df = response_df[["CancID", "DrugID", "AUC"]]
+response_df = response_df[["CancID", "DrugID", "auc"]]
 print(response_df.head())
 
 # Scale Data
