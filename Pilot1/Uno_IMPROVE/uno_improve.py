@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -6,9 +7,7 @@ import candle
 from keras.models import Model
 from keras.layers import Input, Dense, Concatenate, Dropout
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score
-from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.callbacks import (
     Callback,
@@ -20,24 +19,7 @@ from tensorflow.keras.callbacks import (
 # Notes: Permanent Dropout?,
 
 
-def initialize_parameters(default_model="uno_default_model.txt"):
-    # Build benchmark object
-    unoBmk = benchmark.BenchmarkUno(
-        benchmark.file_path,
-        default_model,
-        "keras",
-        prog="uno_baseline",
-        desc="Build neural network based models to predict tumor response to single and paired drugs.",
-    )
-
-    # Initialize parameters
-    gParameters = candle.finalize_parameters(unoBmk)
-    # benchmark.logger.info('Params: {}'.format(gParameters))
-
-    return gParameters
-
-
-warmup_epochs = 20
+warmup_epochs = 5
 initial_lr = 1e-5
 max_lr = 1e-3
 
@@ -73,34 +55,31 @@ class R2Callback(Callback):
         print(f"Epoch {epoch+1}: R2 train: {r2_train:.4f}, R2 val: {r2_val:.4f}")
 
 
-def run(params):
-    args = candle.ArgumentStruct(**params)
-    candle.set_seed(args.rng_seed)
-
+def run():
     # Load the data from CSV
-    filepath = "/mnt/c/Users/rylie/Coding/UNO/Benchmarks/Pilot1/Uno_IMPROVE/ml_data/new_processed_data.csv"
-    df = pd.read_csv(filepath, header=[0, 1])
-
-    # Separate the features and target
-    X = df.drop(("response_values", "AUC"), axis=1)
-    Y = df[("response_values", "AUC")]
-
-    # Split the dataset into training and testing sets
-    X_train, X_val, y_train, y_val = train_test_split(
-        X, Y, test_size=0.2, random_state=42
-    )
-
-    # Split gene and drug information
-    train_gene_info = X_train.loc[:, "gene_info"]
-    train_drug_info = X_train.loc[:, "drug_info"]
-    val_gene_info = X_val.loc[:, "gene_info"]
-    val_drug_info = X_val.loc[:, "drug_info"]
+    filepath = "/mnt/c/Users/rylie/Coding/UNO/Benchmarks/Pilot1/Uno_IMPROVE/ml_data/gCSI-gCSI/split_0"
+    # Train filepaths
+    train_canc_filepath = os.path.join(filepath, "train_x_canc.csv")
+    train_drug_filepath = os.path.join(filepath, "train_x_drug.csv")
+    train_y_filepath = os.path.join(filepath, "train_y_data.csv")
+    # Train reads
+    train_gene_info = pd.read_csv(train_canc_filepath)
+    train_drug_info = pd.read_csv(train_drug_filepath)
+    y_train = pd.read_csv(train_y_filepath)
+    # Validation filepaths
+    val_canc_filepath = os.path.join(filepath, "val_x_canc.csv")
+    val_drug_filepath = os.path.join(filepath, "val_x_drug.csv")
+    val_y_filepath = os.path.join(filepath, "val_y_data.csv")
+    # Validation reads
+    val_gene_info = pd.read_csv(val_canc_filepath)
+    val_drug_info = pd.read_csv(val_drug_filepath)
+    y_val = pd.read_csv(val_y_filepath)
 
     # Gene expression input and encoding layers
     gene_input = Input(shape=(train_gene_info.shape[1],), name="gene_input")
-    gene_encoded = Dense(1024, activation="relu")(gene_input)
+    gene_encoded = Dense(4096, activation="relu")(gene_input)
     gene_encoded = Dropout(0.1)(gene_encoded)
-    gene_encoded = Dense(512, activation="relu")(gene_encoded)
+    gene_encoded = Dense(1024, activation="relu")(gene_encoded)
     gene_encoded = Dropout(0.1)(gene_encoded)
     gene_encoded = Dense(256, activation="relu")(gene_encoded)
     gene_encoded = Dropout(0.1)(gene_encoded)
@@ -147,7 +126,7 @@ def run(params):
 
     # Reduce learing rate callback
     reduce_lr = ReduceLROnPlateau(
-        monitor="val_loss", factor=0.9, patience=5, min_lr=1e-6
+        monitor="val_loss", factor=0.8, patience=3, min_lr=1e-6
     )
 
     # Training the model
@@ -165,8 +144,7 @@ def run(params):
 
 
 def main():
-    params = initialize_parameters()
-    run(params)
+    run()
 
 
 if __name__ == "__main__":
