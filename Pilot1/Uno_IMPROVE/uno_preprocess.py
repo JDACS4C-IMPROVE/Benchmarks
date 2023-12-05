@@ -344,17 +344,17 @@ def run(params):
         # Scale features using training data
         if stage == "train":
             # Scale data
-            df_canc, scaler = scale_df(df_canc, scaler_name=params["scaling"])
-            # df_drug, scaler = scale_df(df_drug, scaler_name=params["scaling"])
+            df_canc, scaler_canc = scale_df(df_canc, scaler_name=params["scaling"])
+            df_drug, scaler_drug = scale_df(df_drug, scaler_name=params["scaling"])
             # Store scaler object
             if params["scaling"] is not None and params["scaling"] != "none":
                 scaler_fpath = Path(params["ml_data_outdir"]) / params["scaler_fname"]
-                joblib.dump(scaler, scaler_fpath)
+                joblib.dump(scaler_canc, scaler_fpath)
                 print("Scaler object created and stored in: ", scaler_fpath)
         else:
             # Use passed scikit scaler object
-            df_canc, _ = scale_df(df_canc, scaler=scaler)
-            # df_drug, _ = scale_df(df_drug, scaler=scaler)
+            df_canc, _ = scale_df(df_canc, scaler=scaler_canc)
+            df_drug, _ = scale_df(df_drug, scaler=scaler_drug)
 
         # Sub-select desired response column (y_col_name)
         # And reduce response dataframe to 3 columns: drug_id, cell_id and selected drug_response

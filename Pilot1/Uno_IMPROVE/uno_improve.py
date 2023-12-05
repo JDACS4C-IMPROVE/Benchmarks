@@ -77,31 +77,31 @@ def run():
 
     # Gene expression input and encoding layers
     gene_input = Input(shape=(train_gene_info.shape[1],), name="gene_input")
-    gene_encoded = Dense(4096, activation="relu")(gene_input)
+    gene_encoded = Dense(256, activation="relu")(gene_input)
     gene_encoded = Dropout(0.1)(gene_encoded)
-    gene_encoded = Dense(1024, activation="relu")(gene_encoded)
+    gene_encoded = Dense(128, activation="relu")(gene_encoded)
     gene_encoded = Dropout(0.1)(gene_encoded)
-    gene_encoded = Dense(256, activation="relu")(gene_encoded)
+    gene_encoded = Dense(64, activation="relu")(gene_encoded)
     gene_encoded = Dropout(0.1)(gene_encoded)
 
     # Drug expression input and encoding layers
     drug_input = Input(shape=(train_drug_info.shape[1],), name="drug_input")
-    drug_encoded = Dense(1024, activation="relu")(drug_input)
+    drug_encoded = Dense(64, activation="relu")(drug_input)
     drug_encoded = Dropout(0.1)(drug_encoded)
-    drug_encoded = Dense(512, activation="relu")(drug_encoded)
+    drug_encoded = Dense(32, activation="relu")(drug_encoded)
     drug_encoded = Dropout(0.1)(drug_encoded)
-    drug_encoded = Dense(256, activation="relu")(drug_encoded)
+    drug_encoded = Dense(16, activation="relu")(drug_encoded)
     drug_encoded = Dropout(0.1)(drug_encoded)
 
     # Concatenate Encodings
     concatenated = Concatenate()([gene_encoded, drug_encoded])
 
     # Additional layers
-    x = Dense(512, activation="relu")(concatenated)
-    x = Dropout(0.1)(x)
-    x = Dense(128, activation="relu")(x)
+    x = Dense(128, activation="relu")(concatenated)
     x = Dropout(0.1)(x)
     x = Dense(32, activation="relu")(x)
+    x = Dropout(0.1)(x)
+    x = Dense(16, activation="relu")(x)
     x = Dropout(0.1)(x)
     output = Dense(1)(x)  # Assuming a single continuous value for AUC
 
