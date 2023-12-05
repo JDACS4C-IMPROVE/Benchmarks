@@ -14,7 +14,8 @@ from improve import framework as frm
 # from improve import dataloader as dtl  # This is replaced with drug_resp_pred
 from improve import drug_resp_pred as drp  # some funcs from dataloader.py were copied to drp
 
-filepath = Path(__file__).resolve().parent
+# filepath = Path(__file__).resolve().parent
+filepath = os.getenv("IMPROVE_DATA_DIR")
 
 drp_preproc_params = [
     {"name": "x_data_canc_files",  # app;
@@ -252,10 +253,11 @@ def run(params):
     # ------------------------------------------------------
     # [Req] Load omics data
     # ---------------------
-    print("\nLoading omics data ...")
+    print("\nLoading omics data ...", )
     oo = drp.OmicsLoader(params)
-    # print(oo)
-    ge = oo.dfs['cancer_gene_expression.tsv']  # get only gene expression dataframe
+    gene_expression_file = params["x_data_canc_files"][0][0]
+    print("Loading file: ", gene_expression_file)
+    ge = oo.dfs[gene_expression_file]  # get only gene expression dataframe
     # ---------------------
 
     # ------------------------------------------------------
@@ -263,7 +265,7 @@ def run(params):
     # ------------------------------------------------------
     # Gene selection (LINCS landmark genes) 
     if params["use_lincs"]:
-        genes_fpath = filepath/"csa_data/raw_data/x_data/landmark_genes"
+        genes_fpath = filepath +"/raw_data/x_data/landmark_genes"
         ge = gene_selection(ge, genes_fpath, canc_col_name=params["canc_col_name"])
 
     # ------------------------------------------------------
@@ -271,8 +273,10 @@ def run(params):
     # --------------------
     print("\nLoading drugs data...")
     dd = drp.DrugsLoader(params)
-    # print(dd)
-    mod = dd.dfs['drug_mordred.tsv']  
+    drug_data_file = params["x_data_drug_files"][0][0]
+    mod = dd.dfs[drug_data_file] # get only drug dataframe  
+    
+    
     # -------------------------------------------
     # Construct ML data for every stage (train, val, test)
     # [Req] All models must load response data (y data) using DrugResponseLoader().
@@ -335,6 +339,16 @@ def run(params):
 
 
 def main():
+    
+    # Set IMPROVE_DATA_DIR
+    if os.getenv("IMPROVE_DATA_DIR") is None:
+        raise Exception(
+            "ERROR ! Required system variable not specified.  \
+                        You must define IMPROVE_DATA_DIR ... Exiting.\n"
+        )
+
+    filepath = os.getenv("IMPROVE_DATA_DIR")
+    
     params = frm.initialize_parameters(
         filepath,
         default_model="uno_default_model2.txt",

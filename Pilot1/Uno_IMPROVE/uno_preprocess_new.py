@@ -96,20 +96,19 @@ if os.getenv("IMPROVE_DATA_DIR") is None:
 
 
 directory = os.getenv("IMPROVE_DATA_DIR")
-directory = os.path.join(directory, "raw_data", "x_data")
+directory_x = os.path.join(directory, "csa_data", "raw_data", "x_data")
 x_data_canc_files = ["cancer_gene_expression.tsv"]
 x_data_drug_files = ["drug_mordred.tsv"]
-y_data_files = ["response.tsv"]
 
-gene_df = merge_file_list(x_data_canc_files, directory, "CancID")
+gene_df = merge_file_list(x_data_canc_files, directory_x, "CancID")
 # gene_df = gene_df[["CancID", "ge_A1BG", "ge_A1CF"]]
 print(gene_df.head())
-drug_df = merge_file_list(x_data_drug_files, directory, "DrugID")
+drug_df = merge_file_list(x_data_drug_files, directory_x, "DrugID")
 # drug_df = drug_df[["DrugID", "mordred_ABC", "mordred_ABCGG"]]
 print(drug_df.head())
 
-directory = os.getenv("IMPROVE_DATA_DIR")
-directory = os.path.join(directory, "raw_data", "y_data")
+directory_y = os.path.join(directory, "csa_data", "raw_data", "y_data")
+y_data_files = ["response.tsv"]
 
 response_df = merge_file_list(y_data_files, directory, ["CancID", "DrugID"])
 response_df = response_df[["CancID", "DrugID", "auc"]]
