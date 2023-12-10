@@ -378,9 +378,9 @@ def run(params):
         y_df = pd.DataFrame(y)
 
         # Construct file paths
-        xc_fpath = Path(params["ml_data_outdir"]) / f"{stage}_x_canc.csv"
-        xd_fpath = Path(params["ml_data_outdir"]) / f"{stage}_x_drug.csv"
-        y_fpath = Path(params["ml_data_outdir"]) / f"{stage}_y_data.csv"
+        xc_fpath = Path(params[f"{stage}_ml_data_dir"]) / f"{stage}_x_canc.csv"
+        xd_fpath = Path(params[f"{stage}_ml_data_dir"]) / f"{stage}_x_drug.csv"
+        y_fpath = Path(params[f"{stage}_ml_data_dir"]) / f"{stage}_y_data.csv"
 
         # Save dataframes to the constructed file paths
         xc_df.to_csv(xc_fpath, index=False)
@@ -417,7 +417,7 @@ def main():
 
     params = frm.initialize_parameters(
         filepath,
-        default_model="uno_default_model2.txt",
+        default_model="uno_default_model.txt",
         additional_definitions=preprocess_params,
         required=req_preprocess_args,
     )
