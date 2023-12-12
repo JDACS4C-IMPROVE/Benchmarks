@@ -8,35 +8,20 @@
 # CSA (cross-study analysis) exmple
 # ----------------------------------------
 
-python uno_preprocess.py
-
-# # Within-study
-# python frm_preprocess_tr_vl_te.py \
-#     --train_data_name CCLE \
-#     --val_data_name CCLE \
-#     --test_data_name CCLE \
-#     --train_split_file_name CCLE_split_4_train.txt \
-#     --val_split_file_name CCLE_split_4_val.txt \
-#     --test_split_file_name CCLE_split_4_test.txt \
-#     --outdir csa_data/ml_data/CCLE-CCLE/split_4
+# Within-study
+python uno_preprocess_improve.py
+# python uno_preprocess_improve.py \
+    # --train_split_file GDSCv1_split_4_train.txt \
+    # --val_split_file GDSCv1_split_4_val.txt \
+    # --test_split_file GDSCv1_split_4_test.txt \
+    # --ml_data_outdir ml_data/GDSCv1-GDSCv1/split_4
 
 # # Cross-study
-# python frm_preprocess_tr_vl_te.py \
-#     --train_data_name CCLE \
-#     --val_data_name CCLE \
-#     --test_data_name GDSCv1 \
-#     --train_split_file_name CCLE_split_4_train.txt \
-#     --val_split_file_name CCLE_split_4_val.txt \
-#     --test_split_file_name GDSCv1_all.txt \
-#     --outdir csa_data/ml_data/CCLE-GDSCv1/split_4
-
-
-# Cross-study
-# python -m ipdb graphdrp_preprocess_improve.py \
-#     --train_split_file GDSCv1_split_0_train.txt \
-#     --val_split_file GDSCv1_split_0_val.txt \
+# python lgbm_preprocess_improve.py \
+#     --train_split_file GDSCv1_split_4_train.txt \
+#     --val_split_file GDSCv1_split_4_val.txt \
 #     --test_split_file CCLE_all.txt \
-#     --ml_data_outdir ml_data/GDSCv1-CCLE/split_0
+#     --ml_data_outdir ml_data/GDSCv1-CCLE/split_4
 
 
 # ----------------------------------------
