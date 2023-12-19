@@ -1,89 +1,66 @@
 #!/bin/bash
+  
+#########################################################################
+### THIS IS A TEMPLATE FILE. SUBSTITUTE #PATH# WITH THE MODEL EXECUTABLE.
+#########################################################################
 
-# Below are several examples of how to run the data preprocessing script.
-# Currently, only the CSA runs are supported (within-study or cross-study).
-# Uncomment and run the one you are you interested in.
+# arg 1 CANDLE_DATA_DIR
+# arg 2 CANDLE_CONFIG
 
-# ----------------------------------------
-# CSA (cross-study analysis) exmple
-# ----------------------------------------
+### Path and Name to your CANDLEized model's main Python script###
 
-# Within-study
-python uno_preprocess_improve.py
-# python uno_preprocess_improve.py \
-    # --train_split_file GDSCv1_split_4_train.txt \
-    # --val_split_file GDSCv1_split_4_val.txt \
-    # --test_split_file GDSCv1_split_4_test.txt \
-    # --ml_data_outdir ml_data/GDSCv1-GDSCv1/split_4
+# e.g. CANDLE_MODEL=graphdrp_preprocess.py
+CANDLE_MODEL=uno_preprocess_improve.py
 
-# # Cross-study
-# python lgbm_preprocess_improve.py \
-#     --train_split_file GDSCv1_split_4_train.txt \
-#     --val_split_file GDSCv1_split_4_val.txt \
-#     --test_split_file CCLE_all.txt \
-#     --ml_data_outdir ml_data/GDSCv1-CCLE/split_4
+# Set env if CANDLE_MODEL is not in same directory as this script
+IMPROVE_MODEL_DIR=${IMPROVE_MODEL_DIR:-$( dirname -- "$0" )}
 
+# Combine path and name and check if executable exists
+CANDLE_MODEL=${IMPROVE_MODEL_DIR}/${CANDLE_MODEL}
 
-# ----------------------------------------
-# LCA (learning curve analysis) exmple
-# ----------------------------------------
-
-# # Train with sample size 1000
-# python frm_preprocess_tr_vl_te.py \
-#     --train_data_name CCLE \
-#     --val_data_name CCLE \
-#     --test_data_name CCLE \
-#     --train_split_file_name CCLE_split_4_train_size_1024.txt \
-#     --val_split_file_name CCLE_split_4_val.txt \
-#     --test_split_file_name CCLE_split_4_test.txt \
-#     --outdir csa_data/ml_data/CCLE/split_4/size_1000
-
-# # Train with sample size 8000
-# python frm_preprocess_tr_vl_te.py \
-#     --train_data_name CCLE \
-#     --val_data_name CCLE \
-#     --test_data_name CCLE \
-#     --train_split_file_name CCLE_split_4_train_size_8000.txt \
-#     --val_split_file_name CCLE_split_4_val.txt \
-#     --test_split_file_name CCLE_split_4_test.txt \
-#     --outdir csa_data/ml_data/CCLE/split_4/size_8000
+if [ ! -f ${CANDLE_MODEL} ] ; then
+	echo No such file ${CANDLE_MODEL}
+	exit 404
+fi
 
 
-# ----------------------------------------
-# Error analysis exmple
-# ----------------------------------------
+if [ $# -lt 2 ] ; then
+        echo "Illegal number of parameters"
+        echo "CANDLE_DATA_DIR PARAMS are required"
+        exit -1
+fi
 
-# # Train with ...
-# python frm_preprocess_tr_vl_te.py \
-#     --train_data_name CCLE \
-#     --val_data_name CCLE \
-#     --test_data_name CCLE \
-#     --train_split_file_name CCLE_split_4_train.txt \
-#     --val_split_file_name CCLE_split_4_val.txt \
-#     --test_split_file_name CCLE_split_4_test.txt \
-#     --outdir csa_data/ml_data/CCLE/split_4
+if [ $# -eq 2 ] ; then
+        CANDLE_DATA_DIR=$1 ; shift
+        CONFIG_FILE=$1 ; shift
+        CMD="python ${CANDLE_MODEL} --config_file ${CONFIG_FILE}"
+        echo "CMD = $CMD"
 
+elif [ $# -ge 3 ] ; then
+        CUDA_VISIBLE_DEVICES=$1 ; shift
+        CANDLE_DATA_DIR=$1 ; shift
 
-# ----------------------------------------
-# Robustness
-# ----------------------------------------
+        # if $3 is a file, then set candle_config
+        if [ -f $CANDLE_DATA_DIR/$1 ] ; then
+		echo "$1 is a file"
+                CANDLE_CONFIG=$1 ; shift
+                CMD="python ${CANDLE_MODEL} --config_file $CANDLE_CONFIG $@"
+                echo "CMD = $CMD $@"
 
-# # Train with noise level of 2 added to x data
-# python frm_preprocess_tr_vl_te.py \
-#     --train_data_name CCLE \
-#     --val_data_name CCLE \
-#     --test_data_name CCLE \
-#     --train_split_file_name CCLE_split_4_train.txt \
-#     --val_split_file_name CCLE_split_4_val.txt \
-#     --test_split_file_name CCLE_split_4_test.txt \
-#     --outdir csa_data/ml_data/CCLE/split_4/x_noise_2
+        # else passthrough $@
+        else
+		echo "$1 is not a file"
+                CMD="python ${CANDLE_MODEL} $@"
+                echo "CMD = $CMD"
 
-# # Train with noise level of 7 added to x data
-# python frm_preprocess_tr_vl_te.py \
-#     --train_data_name CCLE \
-#     --val_data_name CCLE \
-#     --test_data_name CCLE \
-#     --train_split_file_name CCLE_split_4_train.txt \
-#     --val_split_file_name CCLE_split_4_val.txt \
-#     --test_split_file_name CCLE_split_4_test.txt \
-#     --outdir csa_data/ml_data/CCLE/split_4/x_noise_7
+        fi
+fi
+
+# Display runtime arguments
+echo "using CANDLE_DATA_DIR ${CANDLE_DATA_DIR}"
+echo "using CANDLE_CONFIG ${CANDLE_CONFIG}"
+echo "running command ${CMD}"
+
+# Set up environmental variables and execute model
+# source /opt/conda/bin/activate /usr/local/conda_envs/Paccmann_MCA
+CANDLE_DATA_DIR=${CANDLE_DATA_DIR} $CMD
