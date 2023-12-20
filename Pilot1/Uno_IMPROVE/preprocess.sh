@@ -31,7 +31,7 @@ if [ $# -eq 2 ] ; then
         echo "CMD = $CMD"
 
 elif [ $# -ge 3 ] ; then
-        CUDA_VISIBLE_DEVICES=$1 ; shift
+
         CANDLE_DATA_DIR=$1 ; shift
 
         # if $3 is a file, then set candle_config
