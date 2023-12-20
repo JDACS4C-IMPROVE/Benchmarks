@@ -24,12 +24,6 @@ if [ ! -f ${CANDLE_MODEL} ] ; then
 fi
 
 
-if [ $# -lt 2 ] ; then
-        echo "Illegal number of parameters"
-        echo "IMPROVE_DATA_DIR PARAMS are required"
-        exit -1
-fi
-
 if [ $# -eq 2 ] ; then
         CANDLE_DATA_DIR=$1 ; shift
         CONFIG_FILE=$1 ; shift
