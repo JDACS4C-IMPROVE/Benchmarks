@@ -37,7 +37,7 @@ if [ $# -ge 2 ] ; then
         # else passthrough $@
         else
 		echo "$FILE_OR_OPTION is not a file"
-                CMD="python ${CANDLE_MODEL} $@"
+                CMD="python ${CANDLE_MODEL} $FILE_OR_OPTION $@"
                 echo "CMD = $CMD"
 
         fi
