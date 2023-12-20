@@ -25,8 +25,7 @@ from improve import (
     drug_resp_pred as drp,
 )  # some funcs from dataloader.py were copied to drp
 
-# filepath = Path(__file__).resolve().parent
-filepath = os.getenv("IMPROVE_DATA_DIR")
+
 
 app_preproc_params = [
     {
@@ -471,7 +470,7 @@ def main(args):
                         You must define IMPROVE_DATA_DIR ... Exiting.\n"
         )
 
-    filepath = os.getenv("IMPROVE_DATA_DIR")
+
 
     # [Req]
     params = frm.initialize_parameters(
