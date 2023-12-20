@@ -24,30 +24,29 @@ if [ ! -f ${CANDLE_MODEL} ] ; then
 fi
 
 
-if [ $# -eq 2 ] ; then
+if [ $# -ge 2 ] ; then
         CANDLE_DATA_DIR=$1 ; shift
-        CONFIG_FILE=$1 ; shift
-        CMD="python ${CANDLE_MODEL} --config_file ${CONFIG_FILE}"
-        echo "CMD = $CMD"
+        FILE_OR_OPTION=$1 ; shift
 
-elif [ $# -ge 3 ] ; then
-
-        CANDLE_DATA_DIR=$1 ; shift
-
-        # if $3 is a file, then set candle_config
-        if [ -f $CANDLE_DATA_DIR/$1 ] ; then
-		echo "$1 is a file"
-                CANDLE_CONFIG=$1 ; shift
-                CMD="python ${CANDLE_MODEL} --config_file $CANDLE_CONFIG $@"
+        if [ -f $CANDLE_DATA_DIR/${FILE_OR_OPTION} ] ; then
+		echo "$FILE_OR_OPTION is a file"
+                CANDLE_CONFIG=$FILE_OR_OPTION
+                CMD="python ${CANDLE_MODEL} --config_file $CANDLE_DATA_DIR/$CANDLE_CONFIG $@"
                 echo "CMD = $CMD $@"
 
         # else passthrough $@
         else
-		echo "$1 is not a file"
+		echo "$FILE_OR_OPTION is not a file"
                 CMD="python ${CANDLE_MODEL} $@"
                 echo "CMD = $CMD"
 
         fi
+
+        #CMD="python ${CANDLE_MODEL} --config_file ${CANDLE_DATA_DIR}/${CONFIG_FILE}"
+        echo "CMD = $CMD"
+else
+        echo "Usage: preprocess.sh DATA_DIR [CONFIG_FILE|OPTION]"
+        echo "Require at least two arguments: DATA_DIR and CONFIG_FILE or command line options"
 fi
 
 
