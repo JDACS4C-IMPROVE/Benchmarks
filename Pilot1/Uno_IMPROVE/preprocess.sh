@@ -31,17 +31,17 @@ if [ $# -lt 2 ] ; then
 fi
 
 if [ $# -eq 2 ] ; then
-        IMPROVE_DATA_DIR=$1 ; shift
+        CANDLE_DATA_DIR=$1 ; shift
         CONFIG_FILE=$1 ; shift
         CMD="python ${CANDLE_MODEL} --config_file ${CONFIG_FILE}"
         echo "CMD = $CMD"
 
 elif [ $# -ge 3 ] ; then
         CUDA_VISIBLE_DEVICES=$1 ; shift
-        IMPROVE_DATA_DIR=$1 ; shift
+        CANDLE_DATA_DIR=$1 ; shift
 
         # if $3 is a file, then set candle_config
-        if [ -f $IMPROVE_DATA_DIR/$1 ] ; then
+        if [ -f $CANDLE_DATA_DIR/$1 ] ; then
 		echo "$1 is a file"
                 CANDLE_CONFIG=$1 ; shift
                 CMD="python ${CANDLE_MODEL} --config_file $CANDLE_CONFIG $@"
@@ -55,6 +55,7 @@ elif [ $# -ge 3 ] ; then
 
         fi
 fi
+
 
 # Display runtime arguments
 echo "using IMPROVE_DATA_DIR ${IMPROVE_DATA_DIR}"
