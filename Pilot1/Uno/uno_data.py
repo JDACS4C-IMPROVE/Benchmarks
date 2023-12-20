@@ -27,7 +27,8 @@ global_cache = {}
 
 SEED = 2018
 
-DATA_URL = "https://web.cels.anl.gov/projects/IMPROVE_FTP/candle/public/benchmarks/Pilot1/combo/"
+P1B3_URL = "http://ftp.mcs.anl.gov/pub/candle/public/benchmarks/P1B3/"
+DATA_URL = "http://ftp.mcs.anl.gov/pub/candle/public/benchmarks/Pilot1/combo/"
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,6 @@ def get_file(url):
 
 
 def read_IDs_file(fname):
-
     with open(fname, "r") as f:
         read_ids = f.read().splitlines()
 
@@ -666,7 +666,6 @@ def load_cell_rnaseq(
     sample_set=None,
     index_by_sample=False,
 ):
-
     if use_landmark_genes:
         filename = "combined_rnaseq_data_lincs1000"
     elif use_filtered_genes:
@@ -901,7 +900,6 @@ class CombinedDataLoader(object):
         exclude_drugs=[],
         exclude_indices=[],
     ):
-
         seed = self.seed
         train_sep_sources = self.train_sep_sources
         test_sep_sources = self.test_sep_sources
@@ -1122,7 +1120,6 @@ class CombinedDataLoader(object):
         test_sources=["train"],
         partition_by="drug_pair",
     ):
-
         params = locals().copy()
         del params["self"]
 
