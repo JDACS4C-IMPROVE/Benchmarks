@@ -9,5 +9,4 @@ pip install git+https://github.com/JDACS4C-IMPROVE/IMPROVE@develop
 pip install git+https://github.com/ECP-CANDLE/candle_lib@develop
 
 # Other
-conda install -c conda-forge lightgbm=3.1.1 --yes # LigthGBM
-pip install pandas
+pip install tensorflow=2.11.0
