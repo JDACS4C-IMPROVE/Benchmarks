@@ -2,7 +2,7 @@
 
 set -e
 
-# conda create -n lgbm_py37 python=3.7 pip --yes
+# conda create -n Uno_Improve python=3.7.16 pip --yes
 
 # IMPROVE and CANDLE
 pip install git+https://github.com/JDACS4C-IMPROVE/IMPROVE@develop 
