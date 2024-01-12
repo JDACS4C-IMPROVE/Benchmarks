@@ -25,7 +25,7 @@ fi
 
 
 if [ $# -ge 2 ] ; then
-        CANDLE_DATA_DIR=$1 ; shift
+        IMPROVE_DATA_DIR=$1 ; shift
         FILE_OR_OPTION=$1 ; shift
 
         if [ -f $CANDLE_DATA_DIR/${FILE_OR_OPTION} ] ; then
