@@ -65,5 +65,6 @@ echo "running command ${CMD}"
 
 # Set up environmental variables and execute model
 # source /opt/conda/bin/activate /usr/local/conda_envs/Paccmann_MCA
-IMPROVE_DATA_DIR=${IMPROVE_DATA_DIR} python ./uno_preprocess_improve.py
+python /usr/local/bin/Uno_IMPROVE/uno_preprocess_improve.py
+echo "CHECKPOINT 1 ---------------------------------------------"
 CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES} IMPROVE_DATA_DIR=${IMPROVE_DATA_DIR} $CMD
