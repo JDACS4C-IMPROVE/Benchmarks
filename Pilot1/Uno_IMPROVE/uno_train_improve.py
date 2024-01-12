@@ -335,11 +335,10 @@ def run(params: Dict):
 
     # Load the data from CSV
     # Set up datadirs
-    improve_data_dir = os.environ.get("IMPROVE_DATA_DIR")
     train_ml_data_dir = params["train_ml_data_dir"]
-    train_split_dir = os.path.join(improve_data_dir, train_ml_data_dir)
+    train_split_dir = os.path.join(train_ml_data_dir)
     val_ml_data_dir = params["val_ml_data_dir"]
-    val_split_dir = os.path.join(improve_data_dir, val_ml_data_dir)
+    val_split_dir = os.path.join(val_ml_data_dir)
     # Train filepaths
     train_canc_filepath = os.path.join(train_split_dir, "train_x_canc.csv")
     train_drug_filepath = os.path.join(train_split_dir, "train_x_drug.csv")
