@@ -26,7 +26,6 @@ from improve import (
 )  # some funcs from dataloader.py were copied to drp
 
 
-
 app_preproc_params = [
     {
         "name": "y_data_files",  # default
@@ -469,8 +468,6 @@ def main(args):
             "ERROR ! Required system variable not specified.  \
                         You must define IMPROVE_DATA_DIR ... Exiting.\n"
         )
-
-
 
     # [Req]
     params = frm.initialize_parameters(
