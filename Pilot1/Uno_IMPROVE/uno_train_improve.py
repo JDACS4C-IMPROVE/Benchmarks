@@ -339,6 +339,8 @@ def run(params: Dict):
     train_split_dir = os.path.join(train_ml_data_dir)
     val_ml_data_dir = params["val_ml_data_dir"]
     val_split_dir = os.path.join(val_ml_data_dir)
+    test_ml_data_dir = params["test_ml_data_dir"]
+    test_split_dir = os.path.join(test_ml_data_dir)
     # Train filepaths
     train_canc_filepath = os.path.join(train_split_dir, "train_x_canc.csv")
     train_drug_filepath = os.path.join(train_split_dir, "train_x_drug.csv")
@@ -347,6 +349,10 @@ def run(params: Dict):
     val_canc_filepath = os.path.join(val_split_dir, "val_x_canc.csv")
     val_drug_filepath = os.path.join(val_split_dir, "val_x_drug.csv")
     val_y_filepath = os.path.join(val_split_dir, "val_y_data.csv")
+    # Test filepaths
+    test_canc_filepath = os.path.join(test_split_dir, "test_x_canc.csv")
+    test_drug_filepath = os.path.join(test_split_dir, "test_x_drug.csv")
+    test_y_filepath = os.path.join(test_split_dir, "test_y_data.csv")
     # Train reads
     train_canc_info = pd.read_csv(train_canc_filepath)
     train_drug_info = pd.read_csv(train_drug_filepath)
@@ -355,6 +361,10 @@ def run(params: Dict):
     val_canc_info = pd.read_csv(val_canc_filepath)
     val_drug_info = pd.read_csv(val_drug_filepath)
     y_val = pd.read_csv(val_y_filepath)
+    # Test reads
+    test_canc_info = pd.read_csv(test_canc_filepath)
+    test_drug_info = pd.read_csv(test_drug_filepath)
+    y_test = pd.read_csv(test_y_filepath)
 
     # Cancer expression input and encoding layers
     canc_input = Input(shape=(train_canc_info.shape[1],), name="canc_input")
@@ -440,6 +450,8 @@ def run(params: Dict):
     # Compute predictions
     val_pred = model.predict([val_canc_info, val_drug_info])
     val_true = y_val.values
+    test_pred = model.predict([test_canc_info, test_drug_info])
+    test_true = y_test.values
 
     # ------------------------------------------------------
     # [Req] Save raw predictions in dataframe
@@ -460,6 +472,15 @@ def run(params: Dict):
         y_true=val_true,
         y_pred=val_pred,
         stage="val",
+        outdir=params["model_outdir"],
+        metrics=metrics_list,
+    )
+    # Compute test scores
+    test_scores = frm.compute_performace_scores(
+        params,
+        y_true=test_true,
+        y_pred=test_pred,
+        stage="test",
         outdir=params["model_outdir"],
         metrics=metrics_list,
     )

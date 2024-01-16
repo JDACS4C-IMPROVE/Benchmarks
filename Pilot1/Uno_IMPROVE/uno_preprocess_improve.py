@@ -335,7 +335,7 @@ def run(params: Dict):
     ).dfs["response.tsv"]
     rsp = pd.concat([rsp_tr, rsp_vl], axis=0)
 
-    # Retian feature rows that are present in the y data (response dataframe)
+    # Retain feature rows that are present in the y data (response dataframe)
     # Intersection of omics features, drug features, and responses
     rsp = rsp.merge(
         ge[params["canc_col_name"]], on=params["canc_col_name"], how="inner"

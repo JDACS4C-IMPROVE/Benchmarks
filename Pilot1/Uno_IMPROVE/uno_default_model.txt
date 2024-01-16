@@ -17,6 +17,7 @@ md_scaling = "std"
 [Train]
 train_ml_data_dir = "./ml_data/gCSI-gCSI/split_0"
 val_ml_data_dir = "./ml_data/gCSI-gCSI/split_0"
+test_ml_data_dir= "./ml_data/gCSI-gCSI/split_0"
 model_outdir = "./out_models/gCSI/split_0"
 model_file_name = "uno_improve.py"
 model_file_format = ".py"
