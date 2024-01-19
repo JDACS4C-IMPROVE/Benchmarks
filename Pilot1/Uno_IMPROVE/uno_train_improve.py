@@ -225,6 +225,7 @@ model_train_params = [
     },
 ]
 
+
 # [Req] Combine the two lists (the combined parameter list will be passed to
 # frm.initialize_parameters() in the main().
 train_params = app_train_params + model_train_params
@@ -235,7 +236,7 @@ train_params = app_train_params + model_train_params
 metrics_list = ["mse", "rmse", "pcc", "scc", "r2"]
 
 
-def warmup_scheduler(epoch, lr, warmup_epochs, initial_lr, max_lr):
+def warmup_scheduler(epoch, lr, warmup_epochs, initial_lr, max_lr, warmup_type):
     if epoch <= warmup_epochs:
         # Linear warmup
         # lr = initial_lr + (max_lr - initial_lr) * epoch / warmup_epochs
@@ -290,6 +291,10 @@ def run(params: Dict):
     # Build model path
     modelpath = frm.build_model_path(params, model_dir=params["model_outdir"])
 
+    # ------------------------------------------------------
+    # Reading hyperparameters
+    # ------------------------------------------------------
+
     # Learning Hyperparams
     epochs = params["epochs"]
     batch_size = params["batch_size"]
@@ -299,6 +304,7 @@ def run(params: Dict):
     max_lr = raw_max_lr * normalizer
     min_lr = raw_min_lr * normalizer
     warmup_epochs = params["warmup_epochs"]
+    warmup_type = params["warmup_type"]
     initial_lr = min_lr
     reduce_lr_factor = params["reduce_lr_factor"]
     reduce_lr_patience = params["reduce_lr_patience"]
@@ -306,32 +312,34 @@ def run(params: Dict):
 
     # Architecture Hyperparams
     # Cancer
-    canc_layers = params["canc_layers"]
+    canc_num_layers = params["canc_num_layers"]
+    canc_layers_size = []
     canc_layers_dropout = []
     canc_layers_activation = []
-    for i in range(len(canc_layers)):
-        dropout_name = f"canc_layer_{i+1}_dropout"
-        canc_layers_dropout.append(params[dropout_name])
-        activation_name = f"canc_layer_{i+1}_activation"
-        canc_layers_activation.append(params[activation_name])
+    for i in range(canc_num_layers):
+        canc_layers_size.append(params[f"canc_layer_{i+1}_size"])
+        canc_layers_dropout.append(params[f"canc_layer_{i+1}_dropout"])
+        canc_layers_activation.append(params[f"canc_layer_{i+1}_activation"])
     # Drug
-    drug_layers = params["drug_layers"]
+    drug_num_layers = params["drug_num_layers"]
+    drug_layers_size = []
     drug_layers_dropout = []
     drug_layers_activation = []
-    for i in range(len(drug_layers)):
-        dropout_name = f"drug_layer_{i+1}_dropout"
-        drug_layers_dropout.append(params[dropout_name])
-        activation_name = f"drug_layer_{i+1}_activation"
-        drug_layers_activation.append(params[activation_name])
+    for i in range(drug_num_layers):
+        drug_layers_size.append(params[f"drug_layer_{i+1}_size"])
+        drug_layers_dropout.append(params[f"drug_layer_{i+1}_dropout"])
+        drug_layers_activation.append(params[f"drug_layer_{i+1}_activation"])
     # Additional Layers (after concatenation)
-    interaction_layers = params["interaction_layers"]
+    interaction_num_layers = params["interaction_num_layers"]
+    interaction_layers_size = []
     interaction_layers_dropout = []
     interaction_layers_activation = []
-    for i in range(len(interaction_layers)):
-        dropout_name = f"interaction_layer_{i+1}_dropout"
-        interaction_layers_dropout.append(params[dropout_name])
-        activation_name = f"interaction_layer_{i+1}_activation"
-        interaction_layers_activation.append(params[activation_name])
+    for i in range(interaction_num_layers):
+        interaction_layers_size.append(params[f"interaction_layer_{i+1}_size"])
+        interaction_layers_dropout.append(params[f"interaction_layer_{i+1}_dropout"])
+        interaction_layers_activation.append(
+            params[f"interaction_layer_{i+1}_activation"]
+        )
 
     # Load the data from CSV
     # Set up datadirs
@@ -369,8 +377,8 @@ def run(params: Dict):
     # Cancer expression input and encoding layers
     canc_input = Input(shape=(train_canc_info.shape[1],), name="canc_input")
     canc_encoded = canc_input
-    for i in range(len(canc_layers)):
-        canc_encoded = Dense(canc_layers[i], activation=canc_layers_activation[i])(
+    for i in range(canc_num_layers):
+        canc_encoded = Dense(canc_layers_size[i], activation=canc_layers_activation[i])(
             canc_encoded
         )
         canc_encoded = Dropout(canc_layers_dropout[i])(canc_encoded)
@@ -378,8 +386,8 @@ def run(params: Dict):
     # Drug expression input and encoding layers
     drug_input = Input(shape=(train_drug_info.shape[1],), name="drug_input")
     drug_encoded = drug_input
-    for i in range(len(drug_layers)):
-        drug_encoded = Dense(drug_layers[i], activation=drug_layers_activation[i])(
+    for i in range(drug_num_layers):
+        drug_encoded = Dense(drug_layers_size[i], activation=drug_layers_activation[i])(
             drug_encoded
         )
         drug_encoded = Dropout(drug_layers_dropout[i])(drug_encoded)
@@ -387,9 +395,9 @@ def run(params: Dict):
     # Concatenated input and interaction layers
     interaction_input = Concatenate()([canc_encoded, drug_encoded])
     interaction_encoded = interaction_input
-    for i in range(len(interaction_layers)):
+    for i in range(interaction_num_layers):
         interaction_encoded = Dense(
-            interaction_layers[i], activation=interaction_layers_activation[i]
+            interaction_layers_size[i], activation=interaction_layers_activation[i]
         )(interaction_encoded)
         interaction_encoded = Dropout(interaction_layers_dropout[i])(
             interaction_encoded
@@ -413,7 +421,7 @@ def run(params: Dict):
     # Learning rate scheduler callback
     lr_scheduler = LearningRateScheduler(
         lambda epoch: warmup_scheduler(
-            epoch, model.optimizer.lr, warmup_epochs, initial_lr, max_lr
+            epoch, model.optimizer.lr, warmup_epochs, initial_lr, max_lr, warmup_type
         )
     )
 
