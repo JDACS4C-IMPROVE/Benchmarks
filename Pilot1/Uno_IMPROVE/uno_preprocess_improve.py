@@ -462,13 +462,6 @@ def run(params: Dict):
 
 # [Req]
 def main(args):
-    # Set IMPROVE_DATA_DIR
-    if os.getenv("IMPROVE_DATA_DIR") is None:
-        raise Exception(
-            "ERROR ! Required system variable not specified.  \
-                        You must define IMPROVE_DATA_DIR ... Exiting.\n"
-        )
-
     # [Req]
     params = frm.initialize_parameters(
         filepath,
