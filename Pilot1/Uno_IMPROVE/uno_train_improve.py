@@ -238,10 +238,14 @@ metrics_list = ["mse", "rmse", "pcc", "scc", "r2"]
 
 def warmup_scheduler(epoch, lr, warmup_epochs, initial_lr, max_lr, warmup_type):
     if epoch <= warmup_epochs:
-        # Linear warmup
-        # lr = initial_lr + (max_lr - initial_lr) * epoch / warmup_epochs
-        # Quadratic warmup
-        lr = initial_lr + (max_lr - initial_lr) * ((epoch / warmup_epochs) ** 2)
+        if warmup_type == "linear":
+            lr = initial_lr + (max_lr - initial_lr) * epoch / warmup_epochs
+        elif warmup_type == "quadratic":
+            lr = initial_lr + (max_lr - initial_lr) * ((epoch / warmup_epochs) ** 2)
+        elif warmup_type == "exponential":
+            lr = initial_lr * ((max_lr / initial_lr) ** (epoch / warmup_epochs))
+        else:
+            raise ValueError("Invalid warmup type")
     return float(lr)  # Ensure returning a float value
 
 
