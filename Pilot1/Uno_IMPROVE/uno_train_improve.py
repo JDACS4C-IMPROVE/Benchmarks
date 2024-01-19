@@ -303,7 +303,7 @@ def run(params: Dict):
     epochs = params["epochs"]
     batch_size = params["batch_size"]
     raw_max_lr = params["raw_max_lr"]
-    raw_min_lr = raw_max_lr / (10 ** params["log_10_range"])
+    raw_min_lr = raw_max_lr / (10 ** params["lr_log_10_range"])
     normalizer = np.log2(batch_size) + 1
     max_lr = raw_max_lr * normalizer
     min_lr = raw_min_lr * normalizer
