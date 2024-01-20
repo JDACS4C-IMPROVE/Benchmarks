@@ -85,13 +85,13 @@ def run(params: Dict):
     # x_test_data = pd.read_csv(Path(params["test_ml_data_dir"]) / test_data_fname)
 
     # Test filepaths
-    test_canc_filepath = os.path.join(params["test_ml_data_dir"], "test_x_canc.csv")
-    test_drug_filepath = os.path.join(params["test_ml_data_dir"], "test_x_drug.csv")
-    test_y_filepath = os.path.join(params["test_ml_data_dir"], "test_y_data.csv")
+    test_canc_filepath = os.path.join(params["test_ml_data_dir"], "test_x_canc.parquet")
+    test_drug_filepath = os.path.join(params["test_ml_data_dir"], "test_x_drug.parquet")
+    test_y_filepath = os.path.join(params["test_ml_data_dir"], "test_y_data.parquet")
     # Test reads
-    test_canc_info = pd.read_csv(test_canc_filepath)
-    test_drug_info = pd.read_csv(test_drug_filepath)
-    y_test = pd.read_csv(test_y_filepath)
+    test_canc_info = pd.read_parquet(test_canc_filepath)
+    test_drug_info = pd.read_parquet(test_drug_filepath)
+    y_test = pd.read_parquet(test_y_filepath)
 
     # fea_list = ["ge", "mordred"]
     # fea_sep = "."
