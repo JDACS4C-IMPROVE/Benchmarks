@@ -433,14 +433,21 @@ def run(params: Dict):
         # data_fname = frm.build_ml_data_name(params, stage)
 
         # Construct file paths
-        xc_fpath = Path(params[f"{stage}_ml_data_dir"]) / f"{stage}_x_canc.csv"
-        xd_fpath = Path(params[f"{stage}_ml_data_dir"]) / f"{stage}_x_drug.csv"
-        y_fpath = Path(params[f"{stage}_ml_data_dir"]) / f"{stage}_y_data.csv"
+        xc_fpath = Path(params[f"{stage}_ml_data_dir"]) / f"{stage}_x_canc.parquet"
+        xd_fpath = Path(params[f"{stage}_ml_data_dir"]) / f"{stage}_x_drug.parquet"
+        y_fpath = Path(params[f"{stage}_ml_data_dir"]) / f"{stage}_y_data.parquet"
+
+        print(xc_df.head())
+        print(xd_df.head())
+        print(y_df.head())
 
         # Save dataframes to the constructed file paths
-        xc_df.to_csv(xc_fpath, index=False)
-        xd_df.to_csv(xd_fpath, index=False)
-        y_df.to_csv(y_fpath, index=False)
+        xc_df.columns = xc_df.columns.map(str)
+        xc_df.to_parquet(xc_fpath, index=False)
+        xd_df.columns = xd_df.columns.map(str)
+        xd_df.to_parquet(xd_fpath, index=False)
+        y_df.columns = y_df.columns.map(str)
+        y_df.to_parquet(y_fpath, index=False)
 
         # ------------------------
 

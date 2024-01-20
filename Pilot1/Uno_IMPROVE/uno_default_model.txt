@@ -1,5 +1,6 @@
 [Global_Params]
 model_name = "UNO"
+debug = True
 
 [Preprocess]
 train_split_file = "gCSI_split_0_train.txt"
@@ -126,4 +127,3 @@ test_ml_data_dir = "./ml_data/gCSI-CCLE/split_0"
 model_dir = "./out_models/gCSI/split_0"
 infer_outdir = "./out_infer/gCSI-CCLE/split_0"
 test_batch = 256
-cuda_name = "cuda:7"

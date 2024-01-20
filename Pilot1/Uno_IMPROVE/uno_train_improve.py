@@ -324,6 +324,8 @@ def run(params: Dict):
         canc_layers_size.append(params[f"canc_layer_{i+1}_size"])
         canc_layers_dropout.append(params[f"canc_layer_{i+1}_dropout"])
         canc_layers_activation.append(params[f"canc_layer_{i+1}_activation"])
+    print("CANCER LAYERS:")
+    print(canc_layers_size, canc_layers_dropout, canc_layers_activation)
     # Drug
     drug_num_layers = params["drug_num_layers"]
     drug_layers_size = []
@@ -333,6 +335,8 @@ def run(params: Dict):
         drug_layers_size.append(params[f"drug_layer_{i+1}_size"])
         drug_layers_dropout.append(params[f"drug_layer_{i+1}_dropout"])
         drug_layers_activation.append(params[f"drug_layer_{i+1}_activation"])
+    print("DRUG LAYERS:")
+    print(drug_layers_size, drug_layers_dropout, drug_layers_activation)
     # Additional Layers (after concatenation)
     interaction_num_layers = params["interaction_num_layers"]
     interaction_layers_size = []
@@ -344,6 +348,12 @@ def run(params: Dict):
         interaction_layers_activation.append(
             params[f"interaction_layer_{i+1}_activation"]
         )
+    print("INTERACTION LAYERS:")
+    print(
+        interaction_layers_size,
+        interaction_layers_dropout,
+        interaction_layers_activation,
+    )
 
     # Load the data from CSV
     # Set up datadirs
@@ -354,29 +364,46 @@ def run(params: Dict):
     test_ml_data_dir = params["test_ml_data_dir"]
     test_split_dir = os.path.join(test_ml_data_dir)
     # Train filepaths
-    train_canc_filepath = os.path.join(train_split_dir, "train_x_canc.csv")
-    train_drug_filepath = os.path.join(train_split_dir, "train_x_drug.csv")
-    train_y_filepath = os.path.join(train_split_dir, "train_y_data.csv")
+    train_canc_filepath = os.path.join(train_split_dir, "train_x_canc.parquet")
+    train_drug_filepath = os.path.join(train_split_dir, "train_x_drug.parquet")
+    train_y_filepath = os.path.join(train_split_dir, "train_y_data.parquet")
     # Validation filepaths
-    val_canc_filepath = os.path.join(val_split_dir, "val_x_canc.csv")
-    val_drug_filepath = os.path.join(val_split_dir, "val_x_drug.csv")
-    val_y_filepath = os.path.join(val_split_dir, "val_y_data.csv")
+    val_canc_filepath = os.path.join(val_split_dir, "val_x_canc.parquet")
+    val_drug_filepath = os.path.join(val_split_dir, "val_x_drug.parquet")
+    val_y_filepath = os.path.join(val_split_dir, "val_y_data.parquet")
     # Test filepaths
-    test_canc_filepath = os.path.join(test_split_dir, "test_x_canc.csv")
-    test_drug_filepath = os.path.join(test_split_dir, "test_x_drug.csv")
-    test_y_filepath = os.path.join(test_split_dir, "test_y_data.csv")
+    test_canc_filepath = os.path.join(test_split_dir, "test_x_canc.parquet")
+    test_drug_filepath = os.path.join(test_split_dir, "test_x_drug.parquet")
+    test_y_filepath = os.path.join(test_split_dir, "test_y_data.parquet")
     # Train reads
-    train_canc_info = pd.read_csv(train_canc_filepath)
-    train_drug_info = pd.read_csv(train_drug_filepath)
-    y_train = pd.read_csv(train_y_filepath)
+    train_canc_info = pd.read_parquet(train_canc_filepath)
+    train_drug_info = pd.read_parquet(train_drug_filepath)
+    y_train = pd.read_parquet(train_y_filepath)
     # Validation reads
-    val_canc_info = pd.read_csv(val_canc_filepath)
-    val_drug_info = pd.read_csv(val_drug_filepath)
-    y_val = pd.read_csv(val_y_filepath)
+    val_canc_info = pd.read_parquet(val_canc_filepath)
+    val_drug_info = pd.read_parquet(val_drug_filepath)
+    y_val = pd.read_parquet(val_y_filepath)
     # Test reads
-    test_canc_info = pd.read_csv(test_canc_filepath)
-    test_drug_info = pd.read_csv(test_drug_filepath)
-    y_test = pd.read_csv(test_y_filepath)
+    test_canc_info = pd.read_parquet(test_canc_filepath)
+    test_drug_info = pd.read_parquet(test_drug_filepath)
+    y_test = pd.read_parquet(test_y_filepath)
+
+    # Subsetting the data for faster debbuging purposes
+    if params["debug"]:
+        # (1000 samples for training and 100 for validation)
+        train_indices = train_canc_info.sample(
+            frac=(1000 / y_train.shape[0]), random_state=42
+        ).index
+        # Subsetting the training data using the sampled indices
+        train_canc_info = train_canc_info.loc[train_indices]
+        train_drug_info = train_drug_info.loc[train_indices]
+        y_train = y_train.loc[train_indices]
+        # Creating a common sample of indices for validation data
+        val_indices = val_canc_info.sample(frac=0.1, random_state=42).index
+        # Subsetting the validation data using the sampled indices
+        val_canc_info = val_canc_info.loc[val_indices]
+        val_drug_info = val_drug_info.loc[val_indices]
+        y_val = y_val.loc[val_indices]
 
     # Cancer expression input and encoding layers
     canc_input = Input(shape=(train_canc_info.shape[1],), name="canc_input")
@@ -456,8 +483,7 @@ def run(params: Dict):
         callbacks=[r2_callback, lr_scheduler, reduce_lr, early_stopping],
     )
 
-    # Evaluate the model
-    print(R2Callback(train_data_for_callback, val_data_for_callback))
+    model.save(modelpath)
 
     # Compute predictions
     val_pred = model.predict([val_canc_info, val_drug_info])
@@ -497,7 +523,7 @@ def run(params: Dict):
         metrics=metrics_list,
     )
 
-    return val_scores
+    return
 
 
 # [Req]
@@ -511,7 +537,7 @@ def main(args):
         # required=req_train_params,
         required=None,
     )
-    val_scores = run(params)
+    run(params)
     print("\nFinished model training.")
 
 
