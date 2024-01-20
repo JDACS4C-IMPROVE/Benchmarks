@@ -375,35 +375,32 @@ def run(params: Dict):
     test_canc_filepath = os.path.join(test_split_dir, "test_x_canc.parquet")
     test_drug_filepath = os.path.join(test_split_dir, "test_x_drug.parquet")
     test_y_filepath = os.path.join(test_split_dir, "test_y_data.parquet")
-    # Train reads
-    train_canc_info = pd.read_parquet(train_canc_filepath)
-    train_drug_info = pd.read_parquet(train_drug_filepath)
-    y_train = pd.read_parquet(train_y_filepath)
-    # Validation reads
-    val_canc_info = pd.read_parquet(val_canc_filepath)
-    val_drug_info = pd.read_parquet(val_drug_filepath)
-    y_val = pd.read_parquet(val_y_filepath)
-    # Test reads
-    test_canc_info = pd.read_parquet(test_canc_filepath)
-    test_drug_info = pd.read_parquet(test_drug_filepath)
-    y_test = pd.read_parquet(test_y_filepath)
-
-    # Subsetting the data for faster debbuging purposes
     if params["debug"]:
-        # (1000 samples for training and 100 for validation)
-        train_indices = train_canc_info.sample(
-            frac=(1000 / y_train.shape[0]), random_state=42
-        ).index
-        # Subsetting the training data using the sampled indices
-        train_canc_info = train_canc_info.loc[train_indices]
-        train_drug_info = train_drug_info.loc[train_indices]
-        y_train = y_train.loc[train_indices]
-        # Creating a common sample of indices for validation data
-        val_indices = val_canc_info.sample(frac=0.1, random_state=42).index
-        # Subsetting the validation data using the sampled indices
-        val_canc_info = val_canc_info.loc[val_indices]
-        val_drug_info = val_drug_info.loc[val_indices]
-        y_val = y_val.loc[val_indices]
+        # Load a subset of the data for debugging
+        train_canc_info = pd.read_parquet(train_canc_filepath, nrows=1000)
+        train_drug_info = pd.read_parquet(train_drug_filepath, nrows=1000)
+        y_train = pd.read_parquet(train_y_filepath, nrows=1000)
+        # Validation reads
+        val_canc_info = pd.read_parquet(val_canc_filepath, nrows=125)
+        val_drug_info = pd.read_parquet(val_drug_filepath, nrows=125)
+        y_val = pd.read_parquet(val_y_filepath, nrows=125)
+        # Test reads
+        test_canc_info = pd.read_parquet(test_canc_filepath, nrows=125)
+        test_drug_info = pd.read_parquet(test_drug_filepath, nrows=125)
+        y_test = pd.read_parquet(test_y_filepath, nrows=125)
+    else:
+        # Train reads
+        train_canc_info = pd.read_parquet(train_canc_filepath)
+        train_drug_info = pd.read_parquet(train_drug_filepath)
+        y_train = pd.read_parquet(train_y_filepath)
+        # Validation reads
+        val_canc_info = pd.read_parquet(val_canc_filepath)
+        val_drug_info = pd.read_parquet(val_drug_filepath)
+        y_val = pd.read_parquet(val_y_filepath)
+        # Test reads
+        test_canc_info = pd.read_parquet(test_canc_filepath)
+        test_drug_info = pd.read_parquet(test_drug_filepath)
+        y_test = pd.read_parquet(test_y_filepath)
 
     # Cancer expression input and encoding layers
     canc_input = Input(shape=(train_canc_info.shape[1],), name="canc_input")
