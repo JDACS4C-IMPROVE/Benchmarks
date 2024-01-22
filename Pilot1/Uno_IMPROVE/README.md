@@ -7,7 +7,7 @@
    - uno_default_model.txt
 
 # Dependencies
-- Install notes: PyArrow 12.0.1
+- Install notes: Python=3.7, Tensorflow = 2.11, PyArrow 12.0.1
 
 In order to run the modified version of the code, you need to run the following commands:
 ```
