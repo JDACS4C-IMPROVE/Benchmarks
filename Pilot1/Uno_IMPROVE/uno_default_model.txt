@@ -4,7 +4,7 @@ model_name = "UNO"
 [Preprocess]
 train_split_file = "gCSI_split_0_train.txt"
 val_split_file = "gCSI_split_0_val.txt"
-test_split_file = "gCSI_split_0.txt"
+test_split_file = "gCSI_split_0_test.txt"
 ml_data_outdir = "./ml_data/gCSI-CCLE/split_0"
 data_format = ".csv"
 y_data_files = [["response.tsv"]]
