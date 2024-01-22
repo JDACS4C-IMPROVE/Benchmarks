@@ -57,169 +57,169 @@ model_train_params = [
                 Number of cancer feature layers. The
                 script reads layer sizes, dropouts, and
                 activation up to number of layers specified.
-                """
+                """,
     },
     {
         "name": "canc_layer_1_size",
         "type": int,
         "default": 1000,
-        "help": "Size of first cancer feature layer."
+        "help": "Size of first cancer feature layer.",
     },
     {
         "name": "canc_layer_2_size",
         "type": int,
         "default": 1000,
-        "help": "Size of second cancer feature layer."
+        "help": "Size of second cancer feature layer.",
     },
     {
         "name": "canc_layer_3_size",
         "type": int,
         "default": 1000,
-        "help": "Size of third cancer feature layer."
+        "help": "Size of third cancer feature layer.",
     },
     {
         "name": "canc_layer_4_size",
         "type": int,
         "default": 512,
-        "help": "Size of fourth cancer feature layer."
+        "help": "Size of fourth cancer feature layer.",
     },
     {
         "name": "canc_layer_5_size",
         "type": int,
         "default": 256,
-        "help": "Size of fifth cancer feature layer."
+        "help": "Size of fifth cancer feature layer.",
     },
     {
         "name": "canc_layer_6_size",
         "type": int,
         "default": 128,
-        "help": "Size of sixth cancer feature layer."
+        "help": "Size of sixth cancer feature layer.",
     },
     {
         "name": "canc_layer_7_size",
         "type": int,
         "default": 64,
-        "help": "Size of seventh cancer feature layer."
+        "help": "Size of seventh cancer feature layer.",
     },
     {
         "name": "canc_layer_8_size",
         "type": int,
         "default": 32,
-        "help": "Size of eighth cancer feature layer."
+        "help": "Size of eighth cancer feature layer.",
     },
     {
         "name": "canc_layer_9_size",
         "type": int,
         "default": 32,
-        "help": "Size of ninth cancer feature layer."
+        "help": "Size of ninth cancer feature layer.",
     },
     {
         "name": "canc_layer_1_dropout",
         "type": float,
         "default": 0.1,
-        "help": "Dropout for first cancer feature layer."
+        "help": "Dropout for first cancer feature layer.",
     },
     {
         "name": "canc_layer_2_dropout",
         "type": float,
         "default": 0.1,
-        "help": "Dropout for second cancer feature layer."
+        "help": "Dropout for second cancer feature layer.",
     },
     {
         "name": "canc_layer_3_dropout",
         "type": float,
         "default": 0.1,
-        "help": "Dropout for third cancer feature layer."
+        "help": "Dropout for third cancer feature layer.",
     },
     {
         "name": "canc_layer_4_dropout",
         "type": float,
         "default": 0.1,
-        "help": "Dropout for fourth cancer feature layer."
+        "help": "Dropout for fourth cancer feature layer.",
     },
     {
         "name": "canc_layer_5_dropout",
         "type": float,
         "default": 0.1,
-        "help": "Dropout for fifth cancer feature layer."
+        "help": "Dropout for fifth cancer feature layer.",
     },
     {
         "name": "canc_layer_6_dropout",
         "type": float,
         "default": 0.1,
-        "help": "Dropout for sixth cancer feature layer."
+        "help": "Dropout for sixth cancer feature layer.",
     },
     {
         "name": "canc_layer_7_dropout",
         "type": float,
         "default": 0.1,
-        "help": "Dropout for seventh cancer feature layer."
+        "help": "Dropout for seventh cancer feature layer.",
     },
     {
         "name": "canc_layer_8_dropout",
         "type": float,
         "default": 0.1,
-        "help": "Dropout for eighth cancer feature layer."
+        "help": "Dropout for eighth cancer feature layer.",
     },
     {
         "name": "canc_layer_9_dropout",
         "type": float,
         "default": 0.1,
-        "help": "Dropout for ninth cancer feature layer."
+        "help": "Dropout for ninth cancer feature layer.",
     },
     {
         "name": "canc_layer_1_activation",
         "type": str,
         "default": "relu",
-        "help": "Activation for first cancer feature layer."
+        "help": "Activation for first cancer feature layer.",
     },
     {
         "name": "canc_layer_2_activation",
         "type": str,
         "default": "relu",
-        "help": "Activation for second cancer feature layer."
+        "help": "Activation for second cancer feature layer.",
     },
     {
         "name": "canc_layer_3_activation",
         "type": str,
         "default": "relu",
-        "help": "Activation for third cancer feature layer."
+        "help": "Activation for third cancer feature layer.",
     },
     {
         "name": "canc_layer_4_activation",
         "type": str,
         "default": "relu",
-        "help": "Activation for fourth cancer feature layer."
+        "help": "Activation for fourth cancer feature layer.",
     },
     {
         "name": "canc_layer_5_activation",
         "type": str,
         "default": "relu",
-        "help": "Activation for fifth cancer feature layer."
+        "help": "Activation for fifth cancer feature layer.",
     },
     {
         "name": "canc_layer_6_activation",
         "type": str,
         "default": "relu",
-        "help": "Activation for sixth cancer feature layer."
+        "help": "Activation for sixth cancer feature layer.",
     },
     {
         "name": "canc_layer_7_activation",
         "type": str,
         "default": "relu",
-        "help": "Activation for seventh cancer feature layer."
+        "help": "Activation for seventh cancer feature layer.",
     },
     {
         "name": "canc_layer_8_activation",
         "type": str,
         "default": "relu",
-        "help": "Activation for eighth cancer feature layer."
+        "help": "Activation for eighth cancer feature layer.",
     },
     {
         "name": "canc_layer_9_activation",
         "type": str,
         "default": "relu",
-        "help": "Activation for ninth cancer feature layer."
+        "help": "Activation for ninth cancer feature layer.",
     },
     {
         "name": "drug_num_layers",
@@ -229,170 +229,170 @@ model_train_params = [
                 Number of drug feature layers. The script
                 reads layer sizes, dropouts, and activation
                 up to number of layers specified.
-                """
+                """,
     },
     {
         "name": "drug_layer_1_size",
         "type": int,
         "default": 1000,
-        "help": "Size of first drug feature layer."
+        "help": "Size of first drug feature layer.",
     },
-	{
-	    "name": "drug_layer_2_size",
-	    "type": int,
-	    "default": 1000,
-	    "help": "Size of second drug feature layer."
-	},
-	{
-	    "name": "drug_layer_3_size",
-	    "type": int,
-	    "default": 1000,
-	    "help": "Size of third drug feature layer."
-	},
-	{
-	    "name": "drug_layer_4_size",
-	    "type": int,
-	    "default": 512,
-	    "help": "Size of fourth drug feature layer."
-	},
-	{
-	    "name": "drug_layer_5_size",
-	    "type": int,
-	    "default": 256,
-	    "help": "Size of fifth drug feature layer."
-	},
-	{
-	    "name": "drug_layer_6_size",
-	    "type": int,
-	    "default": 128,
-	    "help": "Size of sixth drug feature layer."
-	},
-	{
-	    "name": "drug_layer_7_size",
-	    "type": int,
-	    "default": 64,
-	    "help": "Size of seventh drug feature layer."
-	},
-	{
-	    "name": "drug_layer_8_size",
-	    "type": int,
-	    "default": 32,
-	    "help": "Size of eighth drug feature layer."
-	},
-	{
-	    "name": "drug_layer_9_size",
-	    "type": int,
-	    "default": 32,
-	    "help": "Size of ninth drug feature layer."
-	},
+    {
+        "name": "drug_layer_2_size",
+        "type": int,
+        "default": 1000,
+        "help": "Size of second drug feature layer.",
+    },
+    {
+        "name": "drug_layer_3_size",
+        "type": int,
+        "default": 1000,
+        "help": "Size of third drug feature layer.",
+    },
+    {
+        "name": "drug_layer_4_size",
+        "type": int,
+        "default": 512,
+        "help": "Size of fourth drug feature layer.",
+    },
+    {
+        "name": "drug_layer_5_size",
+        "type": int,
+        "default": 256,
+        "help": "Size of fifth drug feature layer.",
+    },
+    {
+        "name": "drug_layer_6_size",
+        "type": int,
+        "default": 128,
+        "help": "Size of sixth drug feature layer.",
+    },
+    {
+        "name": "drug_layer_7_size",
+        "type": int,
+        "default": 64,
+        "help": "Size of seventh drug feature layer.",
+    },
+    {
+        "name": "drug_layer_8_size",
+        "type": int,
+        "default": 32,
+        "help": "Size of eighth drug feature layer.",
+    },
+    {
+        "name": "drug_layer_9_size",
+        "type": int,
+        "default": 32,
+        "help": "Size of ninth drug feature layer.",
+    },
     {
         "name": "drug_layer_1_dropout",
         "type": float,
         "default": 0.1,
-        "help": "Dropout for first drug feature layer."
+        "help": "Dropout for first drug feature layer.",
     },
-	{
-	    "name": "drug_layer_2_dropout",
-	    "type": float,
-	    "default": 0.1,
-	    "help": "Dropout for second drug feature layer."
-	},
-	{
-	    "name": "drug_layer_3_dropout",
-	    "type": float,
-	    "default": 0.1,
-	    "help": "Dropout for third drug feature layer."
-	},
-	{
-	    "name": "drug_layer_4_dropout",
-	    "type": float,
-	    "default": 0.1,
-	    "help": "Dropout for fourth drug feature layer."
-	},
-	{
-	    "name": "drug_layer_5_dropout",
-	    "type": float,
-	    "default": 0.1,
-	    "help": "Dropout for fifth drug feature layer."
-	},
-	{
-	    "name": "drug_layer_6_dropout",
-	    "type": float,
-	    "default": 0.1,
-	    "help": "Dropout for sixth drug feature layer."
-	},
-	{
-	    "name": "drug_layer_7_dropout",
-	    "type": float,
-	    "default": 0.1,
-	    "help": "Dropout for seventh drug feature layer."
-	},
-	{
-	    "name": "drug_layer_8_dropout",
-	    "type": float,
-	    "default": 0.1,
-	    "help": "Dropout for eighth drug feature layer."
-	},
-	{
-	    "name": "drug_layer_9_dropout",
-	    "type": float,
-	    "default": 0.1,
-	    "help": "Dropout for ninth drug feature layer."
-	},
+    {
+        "name": "drug_layer_2_dropout",
+        "type": float,
+        "default": 0.1,
+        "help": "Dropout for second drug feature layer.",
+    },
+    {
+        "name": "drug_layer_3_dropout",
+        "type": float,
+        "default": 0.1,
+        "help": "Dropout for third drug feature layer.",
+    },
+    {
+        "name": "drug_layer_4_dropout",
+        "type": float,
+        "default": 0.1,
+        "help": "Dropout for fourth drug feature layer.",
+    },
+    {
+        "name": "drug_layer_5_dropout",
+        "type": float,
+        "default": 0.1,
+        "help": "Dropout for fifth drug feature layer.",
+    },
+    {
+        "name": "drug_layer_6_dropout",
+        "type": float,
+        "default": 0.1,
+        "help": "Dropout for sixth drug feature layer.",
+    },
+    {
+        "name": "drug_layer_7_dropout",
+        "type": float,
+        "default": 0.1,
+        "help": "Dropout for seventh drug feature layer.",
+    },
+    {
+        "name": "drug_layer_8_dropout",
+        "type": float,
+        "default": 0.1,
+        "help": "Dropout for eighth drug feature layer.",
+    },
+    {
+        "name": "drug_layer_9_dropout",
+        "type": float,
+        "default": 0.1,
+        "help": "Dropout for ninth drug feature layer.",
+    },
     {
         "name": "drug_layer_1_activation",
         "type": str,
         "default": "relu",
-        "help": "Activation for first drug feature layer."
+        "help": "Activation for first drug feature layer.",
     },
-	{
-	    "name": "drug_layer_2_activation",
-	    "type": str,
-	    "default": "relu",
-	    "help": "Activation for second drug feature layer."
-	},
-	{
-	    "name": "drug_layer_3_activation",
-	    "type": str,
-	    "default": "relu",
-	    "help": "Activation for third drug feature layer."
-	},
-	{
-	    "name": "drug_layer_4_activation",
-	    "type": str,
-	    "default": "relu",
-	    "help": "Activation for fourth drug feature layer."
-	},
-	{
-	    "name": "drug_layer_5_activation",
-	    "type": str,
-	    "default": "relu",
-	    "help": "Activation for fifth drug feature layer."
-	},
-	{
-	    "name": "drug_layer_6_activation",
-	    "type": str,
-	    "default": "relu",
-	    "help": "Activation for sixth drug feature layer."
-	},
-	{
-	    "name": "drug_layer_7_activation",
-	    "type": str,
-	    "default": "relu",
-	    "help": "Activation for seventh drug feature layer."
-	},
-	{
-	    "name": "drug_layer_8_activation",
-	    "type": str,
-	    "default": "relu",
-	    "help": "Activation for eighth drug feature layer."
-	},
-	{
-	    "name": "drug_layer_9_activation",
-	    "type": str,
-	    "default": "relu",
-	    "help": "Activation for ninth drug feature layer."
-	},
+    {
+        "name": "drug_layer_2_activation",
+        "type": str,
+        "default": "relu",
+        "help": "Activation for second drug feature layer.",
+    },
+    {
+        "name": "drug_layer_3_activation",
+        "type": str,
+        "default": "relu",
+        "help": "Activation for third drug feature layer.",
+    },
+    {
+        "name": "drug_layer_4_activation",
+        "type": str,
+        "default": "relu",
+        "help": "Activation for fourth drug feature layer.",
+    },
+    {
+        "name": "drug_layer_5_activation",
+        "type": str,
+        "default": "relu",
+        "help": "Activation for fifth drug feature layer.",
+    },
+    {
+        "name": "drug_layer_6_activation",
+        "type": str,
+        "default": "relu",
+        "help": "Activation for sixth drug feature layer.",
+    },
+    {
+        "name": "drug_layer_7_activation",
+        "type": str,
+        "default": "relu",
+        "help": "Activation for seventh drug feature layer.",
+    },
+    {
+        "name": "drug_layer_8_activation",
+        "type": str,
+        "default": "relu",
+        "help": "Activation for eighth drug feature layer.",
+    },
+    {
+        "name": "drug_layer_9_activation",
+        "type": str,
+        "default": "relu",
+        "help": "Activation for ninth drug feature layer.",
+    },
     {
         "name": "interaction_num_layers",
         "type": int,
@@ -401,145 +401,145 @@ model_train_params = [
                 Number of interaction feature layers. The
                 script reads layer sizes, dropouts, and
                 activation up to number of layers specified.
-                """
+                """,
     },
     {
         "name": "interaction_layer_1_size",
         "type": int,
         "default": 1000,
-        "help": "Size of first interaction layer."
+        "help": "Size of first interaction layer.",
     },
-	{
-	    "name": "interaction_layer_2_size",
-	    "type": int,
-	    "default": 1000,
-	    "help": "Size of second interaction layer."
-	},
-	{
-	    "name": "interaction_layer_3_size",
-	    "type": int,
-	    "default": 1000,
-	    "help": "Size of third interaction layer."
-	},
-	{
-	    "name": "interaction_layer_4_size",
-	    "type": int,
-	    "default": 1000,
-	    "help": "Size of fourth interaction layer."
-	},
-	{
-	    "name": "interaction_layer_5_size",
-	    "type": int,
-	    "default": 1000,
-	    "help": "Size of fifth interaction layer."
-	},
-	{
-	    "name": "interaction_layer_6_size",
-	    "type": int,
-	    "default": 512,
-	    "help": "Size of sixth interaction layer."
-	},
-	{
-	    "name": "interaction_layer_7_size",
-	    "type": int,
-	    "default": 256,
-	    "help": "Size of seventh interaction layer."
-	},
-	{
-	    "name": "interaction_layer_8_size",
-	    "type": int,
-	    "default": 128,
-	    "help": "Size of eighth interaction layer."
-	},
-	{
-	    "name": "interaction_layer_9_size",
-	    "type": int,
-	    "default": 64,
-	    "help": "Size of ninth interaction layer."
-	},
+    {
+        "name": "interaction_layer_2_size",
+        "type": int,
+        "default": 1000,
+        "help": "Size of second interaction layer.",
+    },
+    {
+        "name": "interaction_layer_3_size",
+        "type": int,
+        "default": 1000,
+        "help": "Size of third interaction layer.",
+    },
+    {
+        "name": "interaction_layer_4_size",
+        "type": int,
+        "default": 1000,
+        "help": "Size of fourth interaction layer.",
+    },
+    {
+        "name": "interaction_layer_5_size",
+        "type": int,
+        "default": 1000,
+        "help": "Size of fifth interaction layer.",
+    },
+    {
+        "name": "interaction_layer_6_size",
+        "type": int,
+        "default": 512,
+        "help": "Size of sixth interaction layer.",
+    },
+    {
+        "name": "interaction_layer_7_size",
+        "type": int,
+        "default": 256,
+        "help": "Size of seventh interaction layer.",
+    },
+    {
+        "name": "interaction_layer_8_size",
+        "type": int,
+        "default": 128,
+        "help": "Size of eighth interaction layer.",
+    },
+    {
+        "name": "interaction_layer_9_size",
+        "type": int,
+        "default": 64,
+        "help": "Size of ninth interaction layer.",
+    },
     {
         "name": "interaction_layer_1_dropout",
         "type": float,
         "default": 0.1,
-        "help": "Dropout for first interaction layer."
+        "help": "Dropout for first interaction layer.",
     },
-	{
-	    "name": "interaction_layer_2_dropout",
-	    "type": float,
-	    "default": 0.1,
-	    "help": "Dropout for second interaction layer."
-	},
-	{
-	    "name": "interaction_layer_3_dropout",
-	    "type": float,
-	    "default": 0.1,
-	    "help": "Dropout for third interaction layer."
-	},
-	{
-	    "name": "interaction_layer_4_dropout",
-	    "type": float,
-	    "default": 0.1,
-	    "help": "Dropout for fourth interaction layer."
-	},
-	{
-	    "name": "interaction_layer_5_dropout",
-	    "type": float,
-	    "default": 0.1,
-	    "help": "Dropout for fifth interaction layer."
-	},
-	{
-	    "name": "interaction_layer_6_dropout",
-	    "type": float,
-	    "default": 0.1,
-	    "help": "Dropout for sixth interaction layer."
-	},
-	{
-	    "name": "interaction_layer_7_dropout",
-	    "type": float,
-	    "default": 0.1,
-	    "help": "Dropout for seventh interaction layer."
-	},
-	{
-	    "name": "interaction_layer_8_dropout",
-	    "type": float,
-	    "default": 0.1,
-	    "help": "Dropout for eighth interaction layer."
-	},
-	{
-	    "name": "interaction_layer_9_dropout",
-	    "type": float,
-	    "default": 0.1,
-	    "help": "Dropout for ninth interaction layer."
-	},
+    {
+        "name": "interaction_layer_2_dropout",
+        "type": float,
+        "default": 0.1,
+        "help": "Dropout for second interaction layer.",
+    },
+    {
+        "name": "interaction_layer_3_dropout",
+        "type": float,
+        "default": 0.1,
+        "help": "Dropout for third interaction layer.",
+    },
+    {
+        "name": "interaction_layer_4_dropout",
+        "type": float,
+        "default": 0.1,
+        "help": "Dropout for fourth interaction layer.",
+    },
+    {
+        "name": "interaction_layer_5_dropout",
+        "type": float,
+        "default": 0.1,
+        "help": "Dropout for fifth interaction layer.",
+    },
+    {
+        "name": "interaction_layer_6_dropout",
+        "type": float,
+        "default": 0.1,
+        "help": "Dropout for sixth interaction layer.",
+    },
+    {
+        "name": "interaction_layer_7_dropout",
+        "type": float,
+        "default": 0.1,
+        "help": "Dropout for seventh interaction layer.",
+    },
+    {
+        "name": "interaction_layer_8_dropout",
+        "type": float,
+        "default": 0.1,
+        "help": "Dropout for eighth interaction layer.",
+    },
+    {
+        "name": "interaction_layer_9_dropout",
+        "type": float,
+        "default": 0.1,
+        "help": "Dropout for ninth interaction layer.",
+    },
     {
         "name": "interaction_layer_1_activation",
         "type": str,
         "default": "relu",
-        "help": "Activation for first interaction layer."
+        "help": "Activation for first interaction layer.",
     },
     {
         "name": "epochs",
         "type": int,
         "default": 150,
-        "help": "Number of epochs in training."
+        "help": "Number of epochs in training.",
     },
     {
         "name": "batch_size",
         "type": int,
         "default": 32,
-        "help": "Batch size for training."
+        "help": "Batch size for training.",
     },
     {
         "name": "val_batch",
         "type": int,
         "default": 256,
-        "help": "Validation batch size."
+        "help": "Validation batch size.",
     },
     {
         "name": "raw_max_lr",
         "type": float,
         "default": 1e-6,
-        "help": "Raw maximum learning rate that is scaled according to batch size."
+        "help": "Raw maximum learning rate that is scaled according to batch size.",
     },
     {
         "name": "lr_log_10_range",
@@ -548,25 +548,25 @@ model_train_params = [
         "help": """
                 Log 10 range for min learning from initial 
                 learning rate. Used in warmup and plateau.
-                """
+                """,
     },
     {
         "name": "warmup_epochs",
         "type": int,
         "default": 5,
-        "help": "Number of warmup epochs."
+        "help": "Number of warmup epochs.",
     },
     {
         "name": "warmup_type",
         "type": str,
         "default": "quadratic",
-        "help": "Type of warmup for learning rate."
+        "help": "Type of warmup for learning rate.",
     },
     {
         "name": "reduce_lr_patience",
         "type": int,
         "default": 3,
-        "help": "Patience epochs for reducing learning rate."
+        "help": "Patience epochs for reducing learning rate.",
     },
     {
         "name": "reduce_lr_factor",
@@ -578,13 +578,13 @@ model_train_params = [
         "name": "loss",
         "type": str,
         "default": "mse",
-        "help": "Loss function to be used."
+        "help": "Loss function to be used.",
     },
     {
         "name": "early_stop_metric",
         "type": str,
         "default": "mse",
-        "help": "Loss function for early stopping"
+        "help": "Loss function for early stopping",
     },
     {
         "name": "early_stopping_patience",
@@ -652,7 +652,7 @@ def run(params: Dict):
         dict: prediction performance scores computed on validation data
             according to the metrics_list.
     """
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
 
     # ------------------------------------------------------
     # [Req] Create output dir and build model path
@@ -757,7 +757,7 @@ def run(params: Dict):
     y_test = pd.read_parquet(test_y_filepath)
 
     # Subsetting the data for faster training (debbuging purposes)
-    if params["debug"]:
+    if params["train_debug"]:
         # (1000 samples for training and 100 for validation)
         train_indices = train_canc_info.sample(
             frac=(1000 / y_train.shape[0]), random_state=42
