@@ -1,4 +1,6 @@
 """ Preprocessing of raw data to generate datasets for UNO Model. """
+import time
+preprocess_start_time = time.time()
 import sys
 import os
 from pathlib import Path
@@ -10,7 +12,6 @@ import numpy as np
 import pandas as pd
 import joblib
 import textwrap
-import time
 
 from sklearn.preprocessing import (
     StandardScaler,
@@ -125,6 +126,33 @@ preprocess_params = app_preproc_params + model_preproc_params
 # ------------------------------------------------------------
 
 
+def print_duration(activity, start_time, end_time):
+    """
+    activity (str): Description of the activity.
+    duration (int): Duration in minutes.
+    """
+    duration = end_time - start_time
+    hours = int(duration // 3600)
+    minutes = int((duration % 3600) // 60)
+    seconds = int(duration % 60)
+
+    print(f"Time for {activity}: {hours} hours, {minutes} minutes, and {seconds} seconds\n")
+
+
+def gene_selection(df: pd.DataFrame, genes_fpath: Union[Path, str], canc_col_name: str):
+    """Takes a dataframe omics data (e.g., gene expression) and retains only
+    the genes specified in genes_fpath.
+    """
+    with open(genes_fpath) as f:
+        genes = [str(line.rstrip()) for line in f]
+    # genes = ["ge_" + str(g) for g in genes]  # This is for our legacy data
+    # print("Genes count: {}".format(len(set(genes).intersection(set(df.columns[1:])))))
+    genes = list(set(genes).intersection(set(df.columns[1:])))
+    # genes = drp.common_elements(genes, df.columns[1:])
+    cols = [canc_col_name] + genes
+    return df[cols]
+
+
 def scale_df(
     df: pd.DataFrame, scaler_name: str = "std", scaler=None, verbose: bool = False
 ):
@@ -186,20 +214,6 @@ def scale_df(
     return df, scaler
 
 
-def gene_selection(df: pd.DataFrame, genes_fpath: Union[Path, str], canc_col_name: str):
-    """Takes a dataframe omics data (e.g., gene expression) and retains only
-    the genes specified in genes_fpath.
-    """
-    with open(genes_fpath) as f:
-        genes = [str(line.rstrip()) for line in f]
-    # genes = ["ge_" + str(g) for g in genes]  # This is for our legacy data
-    # print("Genes count: {}".format(len(set(genes).intersection(set(df.columns[1:])))))
-    genes = list(set(genes).intersection(set(df.columns[1:])))
-    # genes = drp.common_elements(genes, df.columns[1:])
-    cols = [canc_col_name] + genes
-    return df[cols]
-
-
 def compose_data_arrays(
     df_cell: pd.DataFrame,
     df_drug: pd.DataFrame,
@@ -220,6 +234,10 @@ def compose_data_arrays(
     Returns:
         np.array: arrays with drug features, cell features and responses
             xd, xc, y
+
+    Justification:
+        According to some searching, appending to a list and then converting to a
+        dataframe is faster than appending to a datafrane for very large sets
     """
     xc = []  # To collect cell features
     xd = []  # To collect drug features
@@ -264,15 +282,11 @@ def compose_data_arrays(
                 )  # xc contains list of cell feature vectors
                 y.append(rsp)
 
-    # print("Number of NaN responses:   ", len(nan_rsp_list))
-    # print("Number of drugs not found: ", len(miss_cell))
-    # print("Number of cells not found: ", len(miss_drug))
+    print("Number of NaN responses:   ", len(nan_rsp_list))
+    print("Number of drugs not found: ", len(miss_cell))
+    print("Number of cells not found: ", len(miss_drug))
 
-    # # Reset index if needed
-    # df_drug = df_drug.reset_index()
-    # df_cell = df_cell.reset_index()
-
-    return np.asarray(xc), np.asarray(xd), np.asarray(y)
+    return pd.DataFrame(xc), pd.DataFrame(xd), pd.DataFrame(y)
 
 
 def run(params: Dict):
@@ -292,6 +306,7 @@ def run(params: Dict):
     frm.create_outdir(outdir=params["ml_data_outdir"])
     # ------------------------------------------------------
 
+    temp_start_time = time.time()
     # ------------------------------------------------------
     # [Req] Load omics data
     # ------------------------------------------------------
@@ -314,10 +329,13 @@ def run(params: Dict):
     md = md.reset_index()  # Needed to do scaling and merging as wanted
     md["improve_chem_id"] = md['improve_chem_id'].astype(str)  # To fix mixed dytpes error
     # ------------------------------------------------------
+    temp_end_time = time.time()
+    print("")
+    print_duration("Loading Data", temp_start_time, temp_end_time)
 
     # Check loaded data if debug mode on
     if params["preprocess_debug"]:
-        print("\nLoaded Gene Expression:")
+        print("Loaded Gene Expression:")
         print(ge.head())
         print(ge.shape)
         print("")
@@ -335,8 +353,9 @@ def run(params: Dict):
     #     ge = gene_selection(ge, genes_fpath, canc_col_name=params["canc_col_name"])
     # ------------------------------------------------------
 
+    temp_start_time = time.time()
     # ------------------------------------------------------
-    # Data prep to create scalar on
+    # Data prep to create scaler on
     # ------------------------------------------------------
     # Load and combine train and val responses
     rsp_tr = drp.DrugResponseLoader(
@@ -383,7 +402,7 @@ def run(params: Dict):
     # ------------------------------------------------------
     # Note: these scale before merging, so doesn't overweight according
     # to common treatments/cell lines
-    print("Creating Feature Scalers")
+    print("\nCreating Feature Scalers\n")
 
     # Scale gene expression
     _, ge_scaler = scale_df(ge_sub, scaler_name=params["ge_scaling"])
@@ -398,6 +417,9 @@ def run(params: Dict):
     print("Scaler object for Mordred:         ", md_scaler_fpath)
 
     del rsp, rsp_tr, rsp_vl, ge_sub, md_sub   # Clean Up
+    # ------------------------------------------------------
+    temp_end_time = time.time()
+    print_duration("Creating Scaler", temp_start_time, temp_end_time)
 
 
     # ------------------------------------------------------
@@ -413,6 +435,8 @@ def run(params: Dict):
 
     for stage, split_file in stages.items():
 
+        split_start_time = time.time()
+        print(f"Stage: {stage.upper()}")
         # --------------------------------------------------
         # Data prep
         # --------------------------------------------------
@@ -452,9 +476,12 @@ def run(params: Dict):
             """))
 
         # Scale features
-        print("\nSCALING DATA\n")
+        temp_start_time = time.time()
+        print("\nScaling data")
         ge_sc, _ = scale_df(ge_sub, scaler=ge_scaler)  # scale gene expression
         md_sc, _ = scale_df(md_sub, scaler=md_scaler)  # scale Mordred descriptors
+        temp_end_time = time.time()
+        print_duration(f"Applying Scaler to {stage.capitalize()}", temp_start_time, temp_end_time)
         if params["preprocess_debug"]:
             print("Gene Expression Scaled:")
             print(ge_sc.head())
@@ -475,29 +502,28 @@ def run(params: Dict):
         # TO-DO: Standardize the saving process
 
         # Compose data
+        temp_start_time = time.time()
+        print("Composing Data")
         xc, xd, y = compose_data_arrays(
             ge_sc, md_sc, rsp_sub, params["canc_col_name"], params["drug_col_name"]
         )
-        print(stage.upper(), "data --> xc ", xc.shape, "xd ", xd.shape, "y ", y.shape, "\n")
+        temp_end_time = time.time()
+        print_duration(f"Composing {stage.capitalize()} Dataframes", temp_start_time, temp_end_time)
+        print(stage.capitalize(), "data --> xc ", xc.shape, "xd ", xd.shape, "y ", y.shape, "\n")
 
-        # Make numpy arrays dataframes
-        print("Changing Numpy Arrays Into Dataframes \n")
-        xc_df = pd.DataFrame(xc)
-        xd_df = pd.DataFrame(xd)
-        y_df = pd.DataFrame(y)
         # Show dataframes if on debug mode
         if params["preprocess_debug"]:
             print("Gene Expression Dataframe:")
-            print(xc_df.head())
-            print(xc_df.shape)
+            print(xc.head())
+            print(xc.shape)
             print("")
             print("Mordred Descriptors Dataframe:")
-            print(xd_df.head())
-            print(xd_df.shape)
+            print(xd.head())
+            print(xd.shape)
             print("")
             print("Responses Dataframe:")
-            print(y_df.head())
-            print(y_df.shape)
+            print(y.head())
+            print(y.shape)
             print("")
 
         # Construct file paths
@@ -506,16 +532,22 @@ def run(params: Dict):
         y_fpath = Path(params[f"{stage}_ml_data_dir"]) / f"{stage}_y_data.parquet"
 
         # Save dataframes to the constructed file paths
+        temp_start_time = time.time()
         print("Saving Dataframes to Parquet")
-        xc_df.columns = xc_df.columns.map(str)
-        xd_df.columns = xd_df.columns.map(str)
-        y_df.columns = y_df.columns.map(str)
+        xc.columns = xc.columns.map(str)
+        xd.columns = xd.columns.map(str)
+        y.columns = y.columns.map(str)
         print("Saving Gene Expression")
-        xc_df.to_parquet(xc_fpath, index=False)
+        xc.to_parquet(xc_fpath, index=False)
         print("Saving Mordred Descriptors")
-        xd_df.to_parquet(xd_fpath, index=False)
+        xd.to_parquet(xd_fpath, index=False)
         print("Saving Responses")
-        y_df.to_parquet(y_fpath, index=False)
+        y.to_parquet(y_fpath, index=False)
+        temp_end_time = time.time()
+        print_duration(f"Saving {stage.upper()} Dataframes", temp_start_time, temp_end_time)
+
+        split_end_time = time.time()
+        print_duration(f"Process {stage.capitalize()} Data", split_start_time, split_end_time)
 
     return params["ml_data_outdir"]
 
