@@ -1,3 +1,5 @@
+import time
+infer_start_time = time.time()
 import os
 import sys
 from pathlib import Path
@@ -161,6 +163,8 @@ def main(args):
         required=None,
     )
     test_scores = run(params)
+    infer_end_time = time.time()
+    print(f"Infer Time = {infer_end_time - infer_start_time} seconds")
     print("\nFinished model inference.")
 
 
