@@ -220,37 +220,51 @@ def compose_data_arrays(
     df_response: pd.DataFrame,
     canc_col_name: str,
     drug_col_name: str,
+    stage: str,
+    preprocess_subset_data = False,
+    random_state = None
 ):
     """Returns drug and cancer feature data, and response values.
 
     Args:
-        df_response (pd.Dataframe): drug response df. This already has been
-            filtered to three columns: drug_id, cell_id and drug_response.
-        df_drug (pd.Dataframe): drug features df.
         df_cell (pd.Dataframe): cell features df.
-        drug_col_name (str): Column name that contains the drug ids.
+        df_drug (pd.Dataframe): drug features df.
+        df_response (pd.Dataframe): drug response df. This already has been
+            filtered to three columns: cell_id, drug_id and drug_response.
         canc_col_name (str): Column name that contains the cancer sample ids.
+        drug_col_name (str): Column name that contains the drug ids.
 
     Returns:
-        np.array: arrays with drug features, cell features and responses
-            xd, xc, y
+        pd.Dataframe: combined dataframe with each row containing cell features,
+            drug features, and response
 
     Justification:
         According to some searching, appending to a list and then converting to a
         dataframe is faster than appending to a datafrane for very large sets
     """
-    xc = []  # To collect cell features
-    xd = []  # To collect drug features
-    y = []  # To collect responses
+    combined_data = []
 
-    # To collect missing or corrupted data
-    miss_cell = []
-    miss_drug = []
-    nan_rsp_list = []
-    count_miss_cell = 0
-    count_miss_drug = 0
-    count_nan_rsp = 0
+    # Subset data if desired
+    if preprocess_subset_data:
+        # Subset 5000 samples (or all for small datasets)
+        total_num_samples = 5000
+        stage_proportions = {"train": 0.8, "val": 0.1, "test": 0.1}
+        stage_num_samples = min(total_num_samples * stage_proportions.get(stage), df_response.shape[0])
+        print(f"{stage}: {stage_num_samples}")
+        # Value check
+        if stage_num_samples is None:
+            raise ValueError(f"""
+                             Unrecognized stage by composing_data_arrays 
+                             function when trying to subset: {stage}""")
+        # Set frac accordingly
+        frac = stage_num_samples / df_response.shape[0]
+    else:
+        frac = 1
 
+    # Shuffle response data (fraction will be smaller if subsetting)
+    df_response = df_response.sample(frac=frac, random_state=random_state)
+
+    # Set indices
     df_cell = df_cell.set_index([canc_col_name])
     df_drug = df_drug.set_index([drug_col_name])
 
@@ -258,35 +272,21 @@ def compose_data_arrays(
         if i > 0 and (i % 15000 == 0):
             print(i)
         cell, drug, rsp = df_response.iloc[i, :].values.tolist()
-        if np.isnan(rsp):
-            count_nan_rsp += 1
-            nan_rsp_list.append(i)
-        # If drug and cell features are available
-        try:  # Look for drug
+
+        # Check for missing of corrupted data
+        if np.isnan(rsp): # Check for nan value of response
+            raise ValueError(f"Response value is NaN at index {i}")
+        try:  # Look for drug and cell features
             drug_features = df_drug.loc[drug]
-        except KeyError:  # drug not found
-            miss_drug.append(drug)
-            count_miss_drug += 1
-        else:  # Look for cell
-            try:
-                cell_features = df_cell.loc[cell]
-            except KeyError:  # cell not found
-                miss_cell.append(cell)
-                count_miss_cell += 1
-            else:  # Both drug and cell were found
-                xd.append(
-                    drug_features.values
-                )  # xd contains list of drug feature vectors
-                xc.append(
-                    cell_features.values
-                )  # xc contains list of cell feature vectors
-                y.append(rsp)
+            cell_features = df_cell.loc[cell]
+        except KeyError as e:  # drug or cell not found
+            print(f"Missing data at index {i}: {e}")
+            continue  # Skip this iteration and move to the next row
+        
+        combined_row = list(cell_features.values) + list(drug_features.values) + [rsp]
+        combined_data.append(combined_row)
 
-    print("Number of NaN responses:   ", len(nan_rsp_list))
-    print("Number of drugs not found: ", len(miss_cell))
-    print("Number of cells not found: ", len(miss_drug))
-
-    return pd.DataFrame(xc), pd.DataFrame(xd), pd.DataFrame(y)
+    return pd.DataFrame(combined_data)
 
 
 def run(params: Dict):
@@ -504,45 +504,27 @@ def run(params: Dict):
         # Compose data
         temp_start_time = time.time()
         print("Composing Data")
-        xc, xd, y = compose_data_arrays(
-            ge_sc, md_sc, rsp_sub, params["canc_col_name"], params["drug_col_name"]
+        combined_dataframe = compose_data_arrays(
+            ge_sc, md_sc, rsp_sub, params["canc_col_name"], params["drug_col_name"], stage, params["preprocess_subset_data"]
         )
         temp_end_time = time.time()
         print_duration(f"Composing {stage.capitalize()} Dataframes", temp_start_time, temp_end_time)
-        print(stage.capitalize(), "data --> xc ", xc.shape, "xd ", xd.shape, "y ", y.shape, "\n")
+        print(stage.capitalize(), "Combined Data --> ", combined_dataframe.shape, "\n")
 
         # Show dataframes if on debug mode
         if params["preprocess_debug"]:
-            print("Gene Expression Dataframe:")
-            print(xc.head())
-            print(xc.shape)
-            print("")
-            print("Mordred Descriptors Dataframe:")
-            print(xd.head())
-            print(xd.shape)
-            print("")
-            print("Responses Dataframe:")
-            print(y.head())
-            print(y.shape)
+            print("Final Dataframe:")
+            print(combined_dataframe.head())
+            print(combined_dataframe.shape)
             print("")
 
         # Construct file paths
-        xc_fpath = Path(params[f"{stage}_ml_data_dir"]) / f"{stage}_x_canc.parquet"
-        xd_fpath = Path(params[f"{stage}_ml_data_dir"]) / f"{stage}_x_drug.parquet"
-        y_fpath = Path(params[f"{stage}_ml_data_dir"]) / f"{stage}_y_data.parquet"
+        combined_dataframe_fpath = Path(params[f"{stage}_ml_data_dir"]) / f"{stage}_combined_data.parquet"
 
         # Save dataframes to the constructed file paths
         temp_start_time = time.time()
-        print("Saving Dataframes to Parquet")
-        xc.columns = xc.columns.map(str)
-        xd.columns = xd.columns.map(str)
-        y.columns = y.columns.map(str)
-        print("Saving Gene Expression")
-        xc.to_parquet(xc_fpath, index=False)
-        print("Saving Mordred Descriptors")
-        xd.to_parquet(xd_fpath, index=False)
-        print("Saving Responses")
-        y.to_parquet(y_fpath, index=False)
+        print("Saving Dataframe to Parquet")
+        combined_dataframe.to_parquet(combined_dataframe_fpath, index=False)
         temp_end_time = time.time()
         print_duration(f"Saving {stage.capitalize()} Dataframes", temp_start_time, temp_end_time)
 
