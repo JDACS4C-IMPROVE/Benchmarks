@@ -4,9 +4,13 @@ import os
 from pathlib import Path
 from typing import Dict, List, Union
 
+# Dependencies: pandas, numpy, joblib, scikit-learn
+
 import numpy as np
 import pandas as pd
 import joblib
+import textwrap
+import time
 
 from sklearn.preprocessing import (
     StandardScaler,
@@ -26,6 +30,18 @@ from improve import (
 )  # some funcs from dataloader.py were copied to drp
 
 
+# ---------------------
+# [Req] Parameter lists
+# ---------------------
+# Two parameter lists are required:
+# 1. app_preproc_params
+# 2. model_preproc_params
+# 
+# The values for the parameters in both lists should be specified in a
+# parameter file that is passed as default_model arg in
+# frm.initialize_parameters().
+
+# 1. App-specific params (App: monotherapy drug response prediction)
 app_preproc_params = [
     {
         "name": "y_data_files",  # default
@@ -61,12 +77,12 @@ app_preproc_params = [
     },
 ]
 
-
+# 2. Model-specific params (Model: Uno)
 model_preproc_params = [
     {
         "name": "use_lincs",
         "type": frm.str2bool,
-        "default": True,
+        "default": False,
         "help": "Flag to indicate if using landmark genes.",
     },
     {
@@ -94,6 +110,12 @@ model_preproc_params = [
         "type": str,
         "default": "x_data_mordred_scaler.gz",
         "help": "File name to save the Mordred scaler object.",
+    },
+    {
+        "name": "preprocess_debug",
+        "type": bool,
+        "default": True,
+        "help": "Debug mode to show data",
     },
 ]
 
@@ -179,11 +201,11 @@ def gene_selection(df: pd.DataFrame, genes_fpath: Union[Path, str], canc_col_nam
 
 
 def compose_data_arrays(
-    df_response: pd.DataFrame,
-    df_drug: pd.DataFrame,
     df_cell: pd.DataFrame,
-    drug_col_name: str,
+    df_drug: pd.DataFrame,
+    df_response: pd.DataFrame,
     canc_col_name: str,
+    drug_col_name: str,
 ):
     """Returns drug and cancer feature data, and response values.
 
@@ -199,40 +221,40 @@ def compose_data_arrays(
         np.array: arrays with drug features, cell features and responses
             xd, xc, y
     """
-    xd = []  # To collect drug features
     xc = []  # To collect cell features
+    xd = []  # To collect drug features
     y = []  # To collect responses
 
     # To collect missing or corrupted data
-    nan_rsp_list = []
     miss_cell = []
     miss_drug = []
-    # count_nan_rsp = 0
-    # count_miss_cell = 0
-    # count_miss_drug = 0
+    nan_rsp_list = []
+    count_miss_cell = 0
+    count_miss_drug = 0
+    count_nan_rsp = 0
 
-    df_drug = df_drug.set_index([drug_col_name])
     df_cell = df_cell.set_index([canc_col_name])
+    df_drug = df_drug.set_index([drug_col_name])
 
-    for i in range(df_response.shape[0]):  # tuples of (drug name, cell id, response)
+    for i in range(df_response.shape[0]):  # tuples of (cell id, drug name, response)
         if i > 0 and (i % 15000 == 0):
             print(i)
-        drug, cell, rsp = df_response.iloc[i, :].values.tolist()
+        cell, drug, rsp = df_response.iloc[i, :].values.tolist()
         if np.isnan(rsp):
-            # count_nan_rsp += 1
+            count_nan_rsp += 1
             nan_rsp_list.append(i)
         # If drug and cell features are available
         try:  # Look for drug
             drug_features = df_drug.loc[drug]
         except KeyError:  # drug not found
             miss_drug.append(drug)
-            # count_miss_drug += 1
+            count_miss_drug += 1
         else:  # Look for cell
             try:
                 cell_features = df_cell.loc[cell]
             except KeyError:  # cell not found
                 miss_cell.append(cell)
-                # count_miss_cell += 1
+                count_miss_cell += 1
             else:  # Both drug and cell were found
                 xd.append(
                     drug_features.values
@@ -246,11 +268,11 @@ def compose_data_arrays(
     # print("Number of drugs not found: ", len(miss_cell))
     # print("Number of cells not found: ", len(miss_drug))
 
-    # # Reset index
+    # # Reset index if needed
     # df_drug = df_drug.reset_index()
     # df_cell = df_cell.reset_index()
 
-    return np.asarray(xd).squeeze(), np.asarray(xc), np.asarray(y)
+    return np.asarray(xc), np.asarray(xd), np.asarray(y)
 
 
 def run(params: Dict):
@@ -260,58 +282,49 @@ def run(params: Dict):
     """
     # import pdb; pdb.set_trace()
 
-    # --------------------------------------------
-    # Check consistency of parameter specification
-    # --------------------------------------------
-    # check_parameter_consistency(params)
-
-    # ------------------------------------------------------
-    # Check data availability and create output directory
-    # ------------------------------------------------------
-    # indtd, outdtd = check_data_available(params)
-    # indtd is dictionary with input_description: path components
-    # outdtd is dictionary with output_description: path components
-
     # ------------------------------------------------------
     # [Req] Build paths and create ML data dir
-    # ----------------------------------------
+    # ------------------------------------------------------
     # Build paths for raw_data, x_data, y_data, splits
     params = frm.build_paths(params)
 
-    # Create outdir for ML data (to save preprocessed data)
-    # processed_outdir = frm.create_ml_data_outdir(params)  # creates params["ml_data_outdir"]
+    # Create output dirto save preprocessed data)
     frm.create_outdir(outdir=params["ml_data_outdir"])
-    # ----------------------------------------
-
     # ------------------------------------------------------
-    # Construct data frames for drug and cell features
-    # ------------------------------------------------------
-    # df_drug, df_cell_all, smile_graphs = build_common_data(params, indtd)
 
     # ------------------------------------------------------
     # [Req] Load omics data
-    # ---------------------
-    print("\nLoads omics data.")
+    # ------------------------------------------------------
+    print("\nLoading omics data.")
     omics_obj = drp.OmicsLoader(params)
-    # print(omics_obj)
     gene_expression_file = params["x_data_canc_files"][0][0]
     print("Loading file: ", gene_expression_file)
     ge = omics_obj.dfs[gene_expression_file]  # return gene expression
-    # print(ge.head())
-    # print(ge.shape)
+    ge["improve_sample_id"] = ge['improve_sample_id'].astype(str)  # To fix mixed dytpes error
     # ------------------------------------------------------
 
     # ------------------------------------------------------
     # [Req] Load drug data
     # ------------------------------------------------------
-    print("\nLoad drugs data.")
+    print("\nLoading drugs data.")
     drugs_obj = drp.DrugsLoader(params)
-    # print(drugs_obj)
     drug_data_file = params["x_data_drug_files"][0][0]
     print("Loading file: ", drug_data_file)
     md = drugs_obj.dfs[drug_data_file]  # return mordred drug descriptors
     md = md.reset_index()  # Needed to do scaling and merging as wanted
+    md["improve_chem_id"] = md['improve_chem_id'].astype(str)  # To fix mixed dytpes error
     # ------------------------------------------------------
+
+    # Check loaded data if debug mode on
+    if params["preprocess_debug"]:
+        print("\nLoaded Gene Expression:")
+        print(ge.head())
+        print(ge.shape)
+        print("")
+        print("Loaded Mordred Descriptors:")
+        print(md.head())
+        print(md.shape)
+        print("")
 
     # ------------------------------------------------------
     # To-Do: USE LINCS
@@ -323,32 +336,54 @@ def run(params: Dict):
     # ------------------------------------------------------
 
     # ------------------------------------------------------
-    # Create feature scaler
+    # Data prep to create scalar on
     # ------------------------------------------------------
-    # Load and combine responses
-    print("Create feature scaler.")
+    # Load and combine train and val responses
     rsp_tr = drp.DrugResponseLoader(
         params, split_file=params["train_split_file"], verbose=False
     ).dfs["response.tsv"]
     rsp_vl = drp.DrugResponseLoader(
         params, split_file=params["val_split_file"], verbose=False
-    ).dfs["response.tsv"]
+    ).dfs["response.tsv"] # Note: Study column is integer but expects str giving warning
     rsp = pd.concat([rsp_tr, rsp_vl], axis=0)
+    # Only keep relevant parts of response
+    rsp = rsp[[params["canc_col_name"], params["drug_col_name"], 'auc']]
 
-    # Retain feature rows that are present in the y data (response dataframe)
-    # Intersection of omics features, drug features, and responses
-    rsp = rsp.merge(
-        ge[params["canc_col_name"]], on=params["canc_col_name"], how="inner"
+    # Keep only common samples between response, drug, and cancer information
+    # Response
+    rsp_sub = rsp.merge(
+       ge[params["canc_col_name"]], on=params["canc_col_name"], how="inner"
     )
-    rsp = rsp.merge(
-        md[params["drug_col_name"]], on=params["drug_col_name"], how="inner"
+    rsp_sub = rsp_sub.merge(
+       md[params["drug_col_name"]], on=params["drug_col_name"], how="inner"
     )
+    # Gene expression
     ge_sub = ge[
-        ge[params["canc_col_name"]].isin(rsp[params["canc_col_name"]])
+        ge[params["canc_col_name"]].isin(rsp_sub[params["canc_col_name"]])
     ].reset_index(drop=True)
+    # Mordred descriptors
     md_sub = md[
-        md[params["drug_col_name"]].isin(rsp[params["drug_col_name"]])
+        md[params["drug_col_name"]].isin(rsp_sub[params["drug_col_name"]])
     ].reset_index(drop=True)
+
+    # Check shapes if debug mode on
+    if params["preprocess_debug"]:
+        print(textwrap.dedent(f"""
+            Gene Expression Shape Before Subsetting With Response: {ge.shape}
+            Gene Expression Shape After Subsetting With Response: {ge_sub.shape}
+            Mordred Shape Before MSubsetting With Response: {md.shape}
+            Mordred Shape After Subsetting With Response: {md_sub.shape}
+            Response Shape Before Merging With Data: {rsp.shape}
+            Response Shape After Merging With Data: {rsp_sub.shape}
+        """))
+
+
+    # ------------------------------------------------------
+    # Create Feature Scaler
+    # ------------------------------------------------------
+    # Note: these scale before merging, so doesn't overweight according
+    # to common treatments/cell lines
+    print("Creating Feature Scalers")
 
     # Scale gene expression
     _, ge_scaler = scale_df(ge_sub, scaler_name=params["ge_scaling"])
@@ -362,14 +397,12 @@ def run(params: Dict):
     joblib.dump(md_scaler, md_scaler_fpath)
     print("Scaler object for Mordred:         ", md_scaler_fpath)
 
-    del rsp, rsp_tr, rsp_vl, ge_sub, md_sub
+    del rsp, rsp_tr, rsp_vl, ge_sub, md_sub   # Clean Up
+
 
     # ------------------------------------------------------
     # [Req] Construct ML data for every stage (train, val, test)
     # ------------------------------------------------------
-    # All models must load response data (y data) using DrugResponseLoader().
-    # Below, we iterate over the 3 split files (train, val, test) and load
-    # response data, filtered by the split ids from the split files.
 
     # Dict with split files corresponding to the three sets (train, val, and test)
     stages = {
@@ -379,90 +412,110 @@ def run(params: Dict):
     }
 
     for stage, split_file in stages.items():
-        # --------------------------------
-        # [Req] Load response data
-        # --------------------------------
+
+        # --------------------------------------------------
+        # Data prep
+        # --------------------------------------------------
+        # Load split responses
         rsp = drp.DrugResponseLoader(params, split_file=split_file, verbose=False).dfs[
             "response.tsv"
         ]
+        # Only keep relevant parts of response
+        rsp = rsp[[params["canc_col_name"], params["drug_col_name"], 'auc']]
 
-        # --------------------------------
-        # Data prep
-        # --------------------------------
-        # Retain (canc, drug) responses for which both omics and drug features
-        # are available.
-        rsp = rsp.merge(
+        # Keep only common samples between response, drug, and cancer information
+        # Response
+        rsp_sub = rsp.merge(
             ge[params["canc_col_name"]], on=params["canc_col_name"], how="inner"
         )
-        rsp = rsp.merge(
+        rsp_sub = rsp_sub.merge(
             md[params["drug_col_name"]], on=params["drug_col_name"], how="inner"
         )
+        # Gene Expression
         ge_sub = ge[
-            ge[params["canc_col_name"]].isin(rsp[params["canc_col_name"]])
+            ge[params["canc_col_name"]].isin(rsp_sub[params["canc_col_name"]])
         ].reset_index(drop=True)
+        # Mordred Descriptors
         md_sub = md[
-            md[params["drug_col_name"]].isin(rsp[params["drug_col_name"]])
+            md[params["drug_col_name"]].isin(rsp_sub[params["drug_col_name"]])
         ].reset_index(drop=True)
+
+        # Check shapes if debug mode on
+        if params["preprocess_debug"]:
+            print(textwrap.dedent(f"""
+                Gene Expression Shape Before Subsetting With Response: {ge.shape}
+                Gene Expression Shape After Subsetting With Response: {ge_sub.shape}
+                Mordred Shape Before Subsetting With Response: {md.shape}
+                Mordred Shape After Subsetting With Response: {md_sub.shape}
+                Response Shape Before Merging With Data: {rsp.shape}
+                Response Shape After Merging With Data: {rsp_sub.shape}
+            """))
 
         # Scale features
+        print("\nSCALING DATA\n")
         ge_sc, _ = scale_df(ge_sub, scaler=ge_scaler)  # scale gene expression
         md_sc, _ = scale_df(md_sub, scaler=md_scaler)  # scale Mordred descriptors
+        if params["preprocess_debug"]:
+            print("Gene Expression Scaled:")
+            print(ge_sc.head())
+            print(ge_sc.shape)
+            print("")
+            print("Mordred Descriptors Scaled:")
+            print(md_sc.head())
+            print(md_sc.shape)
+            print("")
 
-        # Sub-select desired response column (y_col_name)
-        # And reduce response dataframe to 3 columns: drug_id, cell_id and selected drug_response
-        rsp = rsp[
-            [params["drug_col_name"], params["canc_col_name"], params["y_col_name"]]
-        ]
+        # --------------------------------
+        # [Req] Save ML data files in params["ml_data_outdir"]
+        # The implementation of this step depends on the model.
+        # --------------------------------
+        # [Req] Build data name
+        data_fname = frm.build_ml_data_name(params, stage)
 
-        # print(ge.head())
-        # print(mod.head())
-        # print(ydf.head())
+        # TO-DO: Standardize the saving process
 
-        # Further prepare data (model-specific)
-        xd, xc, y = compose_data_arrays(
-            rsp, md_sc, ge_sc, params["drug_col_name"], params["canc_col_name"]
+        # Compose data
+        xc, xd, y = compose_data_arrays(
+            ge_sc, md_sc, rsp_sub, params["canc_col_name"], params["drug_col_name"]
         )
-        print(stage.upper(), "data --> xd ", xd.shape, "xc ", xc.shape, "y ", y.shape)
+        print(stage.upper(), "data --> xc ", xc.shape, "xd ", xd.shape, "y ", y.shape, "\n")
 
         # Make numpy arrays dataframes
+        print("Changing Numpy Arrays Into Dataframes \n")
         xc_df = pd.DataFrame(xc)
         xd_df = pd.DataFrame(xd)
         y_df = pd.DataFrame(y)
-
-        # TestBedDataset???
-        # data_fname = frm.build_ml_data_name(params, stage)
+        # Show dataframes if on debug mode
+        if params["preprocess_debug"]:
+            print("Gene Expression Dataframe:")
+            print(xc_df.head())
+            print(xc_df.shape)
+            print("")
+            print("Mordred Descriptors Dataframe:")
+            print(xd_df.head())
+            print(xd_df.shape)
+            print("")
+            print("Responses Dataframe:")
+            print(y_df.head())
+            print(y_df.shape)
+            print("")
 
         # Construct file paths
         xc_fpath = Path(params[f"{stage}_ml_data_dir"]) / f"{stage}_x_canc.parquet"
         xd_fpath = Path(params[f"{stage}_ml_data_dir"]) / f"{stage}_x_drug.parquet"
         y_fpath = Path(params[f"{stage}_ml_data_dir"]) / f"{stage}_y_data.parquet"
 
-        print(xc_df.head())
-        print(xd_df.head())
-        print(y_df.head())
-
         # Save dataframes to the constructed file paths
+        print("Saving Dataframes to Parquet")
         xc_df.columns = xc_df.columns.map(str)
-        xc_df.to_parquet(xc_fpath, index=False)
         xd_df.columns = xd_df.columns.map(str)
-        xd_df.to_parquet(xd_fpath, index=False)
         y_df.columns = y_df.columns.map(str)
+        print("Saving Gene Expression")
+        xc_df.to_parquet(xc_fpath, index=False)
+        print("Saving Mordred Descriptors")
+        xd_df.to_parquet(xd_fpath, index=False)
+        print("Saving Responses")
         y_df.to_parquet(y_fpath, index=False)
-
-        # ------------------------
-
-        # -----------------------
-        # [Req] Save ML data files in params["ml_data_outdir"]
-        # The implementation of this step, depends on the model.
-        # -----------------------
-        # import ipdb; ipdb.set_trace()
-        # [Req] Create data name
-        # data_fname = frm.build_ml_data_name(params, stage,
-        #                                     file_format=params["data_format"])
-        # data_fname = frm.build_ml_data_name(params, stage)
-
-        # [Req] Save y dataframe for the current stage
-        # frm.save_stage_ydf(ydf, params, stage)
 
     return params["ml_data_outdir"]
 
