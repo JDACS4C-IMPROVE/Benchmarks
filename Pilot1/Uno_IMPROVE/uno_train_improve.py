@@ -1,3 +1,5 @@
+import time
+train_start_time = time.time()
 import os
 import sys
 from pathlib import Path
@@ -672,9 +674,8 @@ def run(params: Dict):
     batch_size = params["batch_size"]
     raw_max_lr = params["raw_max_lr"]
     raw_min_lr = raw_max_lr / (10 ** params["lr_log_10_range"])
-    normalizer = np.log2(batch_size) + 1
-    max_lr = raw_max_lr * normalizer
-    min_lr = raw_min_lr * normalizer
+    max_lr = raw_max_lr * batch_size
+    min_lr = raw_min_lr * batch_size
     warmup_epochs = params["warmup_epochs"]
     warmup_type = params["warmup_type"]
     initial_lr = min_lr
@@ -755,6 +756,21 @@ def run(params: Dict):
     test_canc_info = pd.read_parquet(test_canc_filepath)
     test_drug_info = pd.read_parquet(test_drug_filepath)
     y_test = pd.read_parquet(test_y_filepath)
+
+    # Shuffle the dataframes
+    # Train
+    train_canc_info = train_canc_info.sample(frac=1, random_state=42)
+    train_drug_info = train_drug_info.loc[train_canc_info.index]
+    y_train = y_train.loc[train_canc_info.index]
+    # Val
+    val_canc_info = val_canc_info.sample(frac=1, random_state=42)
+    val_drug_info = val_drug_info.loc[val_canc_info.index]
+    y_val = y_val.loc[val_canc_info.index]
+    # Test
+    test_canc_info = test_canc_info.sample(frac=1, random_state=42)
+    test_drug_info = test_drug_info.loc[test_canc_info.index]
+    y_test = y_test.loc[test_canc_info.index]
+
 
     # Subsetting the data for faster training (debbuging purposes)
     if params["train_debug"]:
@@ -841,6 +857,8 @@ def run(params: Dict):
         restore_best_weights=True,
     )
 
+    epoch_start_time = time.time()
+
     # Training the model
     history = model.fit(
         [train_canc_info, train_drug_info],
@@ -850,6 +868,12 @@ def run(params: Dict):
         batch_size=batch_size,
         callbacks=[r2_callback, lr_scheduler, reduce_lr, early_stopping],
     )
+
+    # Calculate the time per epoch
+    epoch_end_time = time.time()
+    total_epochs = len(history.history['loss'])  # Get the actual number of epochs
+    time_per_epoch = (epoch_end_time - epoch_start_time) / total_epochs
+    print(f'Time per epoch: {time_per_epoch} seconds')
 
     model.save(modelpath)
 
@@ -906,6 +930,8 @@ def main(args):
         required=None,
     )
     run(params)
+    train_end_time = time.time()
+    print(f"Training Time = {train_end_time - train_start_time} seconds")
     print("\nFinished model training.")
 
 
