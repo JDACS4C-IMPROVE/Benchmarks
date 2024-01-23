@@ -544,10 +544,16 @@ def run(params: Dict):
         print("Saving Responses")
         y.to_parquet(y_fpath, index=False)
         temp_end_time = time.time()
-        print_duration(f"Saving {stage.upper()} Dataframes", temp_start_time, temp_end_time)
+        print_duration(f"Saving {stage.capitalize()} Dataframes", temp_start_time, temp_end_time)
 
         split_end_time = time.time()
-        print_duration(f"Process {stage.capitalize()} Data", split_start_time, split_end_time)
+        print_duration(f"Processing {stage.capitalize()} Data", split_start_time, split_end_time)
+
+    # Print total duration
+    preprocess_end_time = time.time()
+    print_duration(
+        f"Preprocessing Data (All)", preprocess_start_time, preprocess_end_time
+    )
 
     return params["ml_data_outdir"]
 
