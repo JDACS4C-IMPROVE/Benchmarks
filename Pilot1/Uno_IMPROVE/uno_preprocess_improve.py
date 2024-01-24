@@ -240,9 +240,10 @@ def compose_data_arrays(
 
     Justification:
         According to some searching, appending to a list and then converting to a
-        dataframe is faster than appending to a datafrane for very large sets
+        dataframe is faster than appending to a dataframe for very large sets
     """
     combined_data = []
+    target_data = []
 
     # Subset data if desired
     if preprocess_subset_data:
@@ -250,7 +251,6 @@ def compose_data_arrays(
         total_num_samples = 5000
         stage_proportions = {"train": 0.8, "val": 0.1, "test": 0.1}
         stage_num_samples = min(total_num_samples * stage_proportions.get(stage), df_response.shape[0])
-        print(f"{stage}: {stage_num_samples}")
         # Value check
         if stage_num_samples is None:
             raise ValueError(f"""
@@ -262,11 +262,17 @@ def compose_data_arrays(
         frac = 1
 
     # Shuffle response data (fraction will be smaller if subsetting)
-    df_response = df_response.sample(frac=frac, random_state=random_state)
+    df_response = df_response.sample(frac=frac, random_state=random_state).reset_index(drop=True)
 
     # Set indices
     df_cell = df_cell.set_index([canc_col_name])
     df_drug = df_drug.set_index([drug_col_name])
+
+    # Create cell and drug column names. Necessary to save data in 1 file and then load into block-module design (knowing which columns go where)
+    cell_column_names = [f'ge{i}' for i in range(df_cell.shape[1])]
+    drug_column_names = [f'md{i}' for i in range(df_drug.shape[1])]
+    response_column_name = [df_response.columns[2]]
+    column_names = cell_column_names + drug_column_names + response_column_name
 
     for i in range(df_response.shape[0]):  # tuples of (cell id, drug name, response)
         if i > 0 and (i % 15000 == 0):
@@ -282,11 +288,19 @@ def compose_data_arrays(
         except KeyError as e:  # drug or cell not found
             print(f"Missing data at index {i}: {e}")
             continue  # Skip this iteration and move to the next row
-        
-        combined_row = list(cell_features.values) + list(drug_features.values) + [rsp]
-        combined_data.append(combined_row)
 
-    return pd.DataFrame(combined_data)
+        combined_data_row = list(cell_features.values) + list(drug_features.values) + [rsp]
+        target_row = [rsp]
+
+        combined_data.append(combined_data_row)
+        target_data.append(target_row)
+
+    combined_dataframe = pd.DataFrame(combined_data, columns=column_names)
+
+    print(combined_dataframe.head())
+    target_dataframe = pd.DataFrame(target_data, columns=response_column_name)
+
+    return combined_dataframe, target_dataframe 
 
 
 def run(params: Dict):
@@ -302,7 +316,7 @@ def run(params: Dict):
     # Build paths for raw_data, x_data, y_data, splits
     params = frm.build_paths(params)
 
-    # Create output dirto save preprocessed data)
+    # Create output dir to save preprocessed data)
     frm.create_outdir(outdir=params["ml_data_outdir"])
     # ------------------------------------------------------
 
@@ -496,35 +510,31 @@ def run(params: Dict):
         # [Req] Save ML data files in params["ml_data_outdir"]
         # The implementation of this step depends on the model.
         # --------------------------------
-        # [Req] Build data name
-        data_fname = frm.build_ml_data_name(params, stage)
-
-        # TO-DO: Standardize the saving process
 
         # Compose data
         temp_start_time = time.time()
         print("Composing Data")
-        combined_dataframe = compose_data_arrays(
+        combined_df, y_df = compose_data_arrays(
             ge_sc, md_sc, rsp_sub, params["canc_col_name"], params["drug_col_name"], stage, params["preprocess_subset_data"]
         )
         temp_end_time = time.time()
         print_duration(f"Composing {stage.capitalize()} Dataframes", temp_start_time, temp_end_time)
-        print(stage.capitalize(), "Combined Data --> ", combined_dataframe.shape, "\n")
+        print(stage.capitalize(), "Final combined data --> ", combined_df.shape, "\n")
 
         # Show dataframes if on debug mode
         if params["preprocess_debug"]:
-            print("Final Dataframe:")
-            print(combined_dataframe.head())
-            print(combined_dataframe.shape)
+            print("Final Combined Data:")
+            print(combined_df.head())
             print("")
 
-        # Construct file paths
-        combined_dataframe_fpath = Path(params[f"{stage}_ml_data_dir"]) / f"{stage}_combined_data.parquet"
-
-        # Save dataframes to the constructed file paths
+        # Save final dataframe to the constructed file paths
         temp_start_time = time.time()
-        print("Saving Dataframe to Parquet")
-        combined_dataframe.to_parquet(combined_dataframe_fpath, index=False)
+        print("Save Final Data to Parquet")
+        # [Req] Build data name
+        data_fname = frm.build_ml_data_name(params, stage)
+        combined_df.to_parquet(Path(params["ml_data_outdir"])/data_fname)
+        # [Req] Save y dataframe for the current stage
+        frm.save_stage_ydf(y_df, params, stage)
         temp_end_time = time.time()
         print_duration(f"Saving {stage.capitalize()} Dataframes", temp_start_time, temp_end_time)
 

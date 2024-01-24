@@ -14,10 +14,8 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from keras.models import Model
-from keras.layers import Input, Dense, Concatenate, Dropout
-from sklearn.model_selection import train_test_split
+from keras.layers import Input, Dense, Concatenate, Dropout, Lambda
 from sklearn.metrics import r2_score
-from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.callbacks import (
     Callback,
     ReduceLROnPlateau,
@@ -693,8 +691,6 @@ def run(params: Dict):
         canc_layers_size.append(params[f"canc_layer_{i+1}_size"])
         canc_layers_dropout.append(params[f"canc_layer_{i+1}_dropout"])
         canc_layers_activation.append(params[f"canc_layer_{i+1}_activation"])
-    print("CANCER LAYERS:")
-    print(canc_layers_size, canc_layers_dropout, canc_layers_activation)
     # Drug
     drug_num_layers = params["drug_num_layers"]
     drug_layers_size = []
@@ -704,8 +700,6 @@ def run(params: Dict):
         drug_layers_size.append(params[f"drug_layer_{i+1}_size"])
         drug_layers_dropout.append(params[f"drug_layer_{i+1}_dropout"])
         drug_layers_activation.append(params[f"drug_layer_{i+1}_activation"])
-    print("DRUG LAYERS:")
-    print(drug_layers_size, drug_layers_dropout, drug_layers_activation)
     # Additional Layers (after concatenation)
     interaction_num_layers = params["interaction_num_layers"]
     interaction_layers_size = []
@@ -717,96 +711,78 @@ def run(params: Dict):
         interaction_layers_activation.append(
             params[f"interaction_layer_{i+1}_activation"]
         )
-    print("INTERACTION LAYERS:")
-    print(
-        interaction_layers_size,
-        interaction_layers_dropout,
-        interaction_layers_activation,
-    )
-
-    # Load the data from parquet
-    # Set up datadirs
-    train_ml_data_dir = params["train_ml_data_dir"]
-    train_split_dir = os.path.join(train_ml_data_dir)
-    val_ml_data_dir = params["val_ml_data_dir"]
-    val_split_dir = os.path.join(val_ml_data_dir)
-    test_ml_data_dir = params["test_ml_data_dir"]
-    test_split_dir = os.path.join(test_ml_data_dir)
-    # Train filepaths
-    train_canc_filepath = os.path.join(train_split_dir, "train_x_canc.parquet")
-    train_drug_filepath = os.path.join(train_split_dir, "train_x_drug.parquet")
-    train_y_filepath = os.path.join(train_split_dir, "train_y_data.parquet")
-    # Validation filepaths
-    val_canc_filepath = os.path.join(val_split_dir, "val_x_canc.parquet")
-    val_drug_filepath = os.path.join(val_split_dir, "val_x_drug.parquet")
-    val_y_filepath = os.path.join(val_split_dir, "val_y_data.parquet")
-    # Test filepaths
-    test_canc_filepath = os.path.join(test_split_dir, "test_x_canc.parquet")
-    test_drug_filepath = os.path.join(test_split_dir, "test_x_drug.parquet")
-    test_y_filepath = os.path.join(test_split_dir, "test_y_data.parquet")
-    # Train reads
-    train_canc_info = pd.read_parquet(train_canc_filepath)
-    train_drug_info = pd.read_parquet(train_drug_filepath)
-    y_train = pd.read_parquet(train_y_filepath)
-    # Validation reads
-    val_canc_info = pd.read_parquet(val_canc_filepath)
-    val_drug_info = pd.read_parquet(val_drug_filepath)
-    y_val = pd.read_parquet(val_y_filepath)
-    # Test reads
-    test_canc_info = pd.read_parquet(test_canc_filepath)
-    test_drug_info = pd.read_parquet(test_drug_filepath)
-    y_test = pd.read_parquet(test_y_filepath)
-
-    # Shuffle the dataframes
-    # Train
-    train_canc_info = train_canc_info.sample(frac=1, random_state=42)
-    train_drug_info = train_drug_info.loc[train_canc_info.index]
-    y_train = y_train.loc[train_canc_info.index]
-    # Val
-    val_canc_info = val_canc_info.sample(frac=1, random_state=42)
-    val_drug_info = val_drug_info.loc[val_canc_info.index]
-    y_val = y_val.loc[val_canc_info.index]
-    # Test
-    test_canc_info = test_canc_info.sample(frac=1, random_state=42)
-    test_drug_info = test_drug_info.loc[test_canc_info.index]
-    y_test = y_test.loc[test_canc_info.index]
-
-
-    # Subsetting the data for faster training (debbuging purposes)
+    # Print architecture in debug mode
     if params["train_debug"]:
-        # (1000 samples for training and 100 for validation)
-        train_indices = train_canc_info.sample(
-            frac=(1000 / y_train.shape[0]), random_state=42
-        ).index
-        # Subsetting the training data using the sampled indices
-        train_canc_info = train_canc_info.loc[train_indices]
-        train_drug_info = train_drug_info.loc[train_indices]
-        y_train = y_train.loc[train_indices]
-        # Creating a common sample of indices for validation data
-        val_indices = val_canc_info.sample(frac=0.1, random_state=42).index
-        # Subsetting the validation data using the sampled indices
-        val_canc_info = val_canc_info.loc[val_indices]
-        val_drug_info = val_drug_info.loc[val_indices]
-        y_val = y_val.loc[val_indices]
+        print("CANCER LAYERS:")
+        print(canc_layers_size, canc_layers_dropout, canc_layers_activation)
+        print("DRUG LAYERS:")
+        print(drug_layers_size, drug_layers_dropout, drug_layers_activation)
+        print("INTERACTION LAYERS:")
+        print(
+            interaction_layers_size,
+            interaction_layers_dropout,
+            interaction_layers_activation,
+        )
+
+    # ------------------------------------------------------
+    # [Req] Create data names for train and val sets
+    # ------------------------------------------------------
+    train_data_fname = frm.build_ml_data_name(params, stage="train")
+    val_data_fname = frm.build_ml_data_name(params, stage="val")
+    test_data_fname = frm.build_ml_data_name(params, stage="val")
+
+    # ------------------------------------------------------
+    # Load model input data (ML data)
+    # ------------------------------------------------------
+    tr_data = pd.read_parquet(Path(params["train_ml_data_dir"])/train_data_fname)
+    vl_data = pd.read_parquet(Path(params["val_ml_data_dir"])/val_data_fname)
+    ts_data = pd.read_parquet(Path(params["test_ml_data_dir"])/test_data_fname)
+
+    # Subsetting the data for faster training if desired
+    if params["train_subset_data"]:
+        # Subset 5000 samples (or all for small datasets)
+        total_num_samples = min(5000, tr_data.shape[0] + vl_data.shape[0], ts_data.shape[0])
+        dataset_proportions = {"train": 0.8, "validation": 0.1, "test": 0.1}
+        num_samples = {dataset: int(total_num_samples * proportion) for dataset, proportion in dataset_proportions.items()}
+        # Subsetting the datasets
+        tr_data = tr_data.sample(n=num_samples["train"]).reset_index(drop=True)
+        vl_data = vl_data.sample(n=num_samples["validation"]).reset_index(drop=True)
+        ts_data = ts_data.sample(n=num_samples["test"]).reset_index(drop=True) 
+
+    # Show data in debug mode
+    if params["train_debug"]:
+        print(tr_data.head())
+        print(vl_data.head())
+        print(ts_data.head())
+
+    # Separate input and target
+    x_train = tr_data.iloc[:, :-1]
+    y_train = tr_data.iloc[:, -1]
+    x_val = vl_data.iloc[:, :-1]
+    y_val = vl_data.iloc[:, -1]
+    x_test = ts_data.iloc[:, :-1]
+    y_test = ts_data.iloc[:, -1]  
+
+    # Identify the Feature Sets
+    ge_columns = [col for col in x_train.columns if col.startswith('ge')]
+    md_columns = [col for col in x_train.columns if col.startswith('md')]
+    # Slice the input tensor
+    all_input = Input(shape=(len(ge_columns) + len(md_columns),), name="all_input")
+    canc_input = Lambda(lambda x: x[:, :len(ge_columns)])(all_input)
+    drug_input = Lambda(lambda x: x[:, len(ge_columns):len(ge_columns) + len(md_columns)])(all_input)
 
     # Cancer expression input and encoding layers
-    canc_input = Input(shape=(train_canc_info.shape[1],), name="canc_input")
     canc_encoded = canc_input
     for i in range(canc_num_layers):
-        canc_encoded = Dense(canc_layers_size[i], activation=canc_layers_activation[i])(
-            canc_encoded
-        )
+        canc_encoded = Dense(canc_layers_size[i], activation=canc_layers_activation[i])(canc_encoded)
         canc_encoded = Dropout(canc_layers_dropout[i])(canc_encoded)
 
     # Drug expression input and encoding layers
-    drug_input = Input(shape=(train_drug_info.shape[1],), name="drug_input")
     drug_encoded = drug_input
     for i in range(drug_num_layers):
-        drug_encoded = Dense(drug_layers_size[i], activation=drug_layers_activation[i])(
-            drug_encoded
-        )
+        drug_encoded = Dense(drug_layers_size[i], activation=drug_layers_activation[i])(drug_encoded)
         drug_encoded = Dropout(drug_layers_dropout[i])(drug_encoded)
-
+    
     # Concatenated input and interaction layers
     interaction_input = Concatenate()([canc_encoded, drug_encoded])
     interaction_encoded = interaction_input
@@ -822,15 +798,15 @@ def run(params: Dict):
     output = Dense(1)(interaction_encoded)  # A single continuous value such as AUC
 
     # Compile Model
-    model = Model(inputs=[canc_input, drug_input], outputs=output)
+    model = Model(inputs=all_input, outputs=output)
     model.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=initial_lr),
         loss="mean_squared_error",
     )
 
     # Instantiate the R2 callback with training and validation data
-    train_data_for_callback = ([train_canc_info, train_drug_info], y_train)
-    val_data_for_callback = ([val_canc_info, val_drug_info], y_val)
+    train_data_for_callback = (x_train, y_train)
+    val_data_for_callback = (x_val, y_val)
     r2_callback = R2Callback(train_data_for_callback, val_data_for_callback)
 
     # Learning rate scheduler callback
@@ -861,9 +837,9 @@ def run(params: Dict):
 
     # Training the model
     history = model.fit(
-        [train_canc_info, train_drug_info],
+        x_train,
         y_train,
-        validation_data=([val_canc_info, val_drug_info], y_val),
+        validation_data=(x_val, y_val),
         epochs=epochs,
         batch_size=batch_size,
         callbacks=[r2_callback, lr_scheduler, reduce_lr, early_stopping],
@@ -878,9 +854,9 @@ def run(params: Dict):
     model.save(modelpath)
 
     # Compute predictions
-    val_pred = model.predict([val_canc_info, val_drug_info])
+    val_pred = model.predict(x_val)
     val_true = y_val.values
-    test_pred = model.predict([test_canc_info, test_drug_info])
+    test_pred = model.predict(x_test)
     test_true = y_test.values
 
     # ------------------------------------------------------
