@@ -729,7 +729,7 @@ def run(params: Dict):
     # ------------------------------------------------------
     train_data_fname = frm.build_ml_data_name(params, stage="train")
     val_data_fname = frm.build_ml_data_name(params, stage="val")
-    test_data_fname = frm.build_ml_data_name(params, stage="val")
+    test_data_fname = frm.build_ml_data_name(params, stage="test")
 
     # ------------------------------------------------------
     # Load model input data (ML data)

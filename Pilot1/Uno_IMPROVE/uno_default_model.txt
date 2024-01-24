@@ -13,7 +13,7 @@ x_data_drug_files = [["drug_mordred.tsv"]]
 use_lincs = False
 ge_scaling = "std"
 md_scaling = "std"
-preprocess_debug = False
+preprocess_debug = True
 preprocess_subset_data = False
 
 [Train]
@@ -107,9 +107,9 @@ interaction_layer_7_activation = "relu"
 interaction_layer_8_activation = "relu"
 interaction_layer_9_activation = "relu"
 epochs = 150
-batch_size = 16
+batch_size = 32
 val_batch = 256
-raw_max_lr = 1e-7
+raw_max_lr = 3e-8
 lr_log_10_range = 3
 warmup_epochs = 5
 warmup_type = "quadratic"
