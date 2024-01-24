@@ -744,6 +744,7 @@ def run(params: Dict):
         total_num_samples = min(5000, tr_data.shape[0] + vl_data.shape[0], ts_data.shape[0])
         dataset_proportions = {"train": 0.8, "validation": 0.1, "test": 0.1}
         num_samples = {dataset: int(total_num_samples * proportion) for dataset, proportion in dataset_proportions.items()}
+        print(num_samples)
         # Subsetting the datasets
         tr_data = tr_data.sample(n=num_samples["train"]).reset_index(drop=True)
         vl_data = vl_data.sample(n=num_samples["validation"]).reset_index(drop=True)

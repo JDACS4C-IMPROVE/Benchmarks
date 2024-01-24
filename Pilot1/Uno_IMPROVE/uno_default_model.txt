@@ -14,7 +14,7 @@ use_lincs = False
 ge_scaling = "std"
 md_scaling = "std"
 preprocess_debug = False
-preprocess_subset_data = True
+preprocess_subset_data = False
 
 [Train]
 train_ml_data_dir = "./ml_data/CCLE-CCLE/split_0"
@@ -109,7 +109,7 @@ interaction_layer_9_activation = "relu"
 epochs = 150
 batch_size = 16
 val_batch = 256
-raw_max_lr = 5e-8
+raw_max_lr = 1e-7
 lr_log_10_range = 3
 warmup_epochs = 5
 warmup_type = "quadratic"
@@ -123,7 +123,7 @@ model_arch = "MultiHead NeuralNet"
 log_interval = 20
 cuda_name = "cuda:7"
 train_debug = False
-train_subset_data = True
+train_subset_data = False
 
 [Infer]
 test_ml_data_dir = "./ml_data/CCLE-CCLE/split_0"

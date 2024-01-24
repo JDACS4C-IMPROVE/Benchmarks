@@ -297,7 +297,6 @@ def compose_data_arrays(
 
     combined_dataframe = pd.DataFrame(combined_data, columns=column_names)
 
-    print(combined_dataframe.head())
     target_dataframe = pd.DataFrame(target_data, columns=response_column_name)
 
     return combined_dataframe, target_dataframe 
