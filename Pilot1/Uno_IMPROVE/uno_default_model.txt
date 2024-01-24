@@ -2,10 +2,10 @@
 model_name = "UNO"
 
 [Preprocess]
-train_split_file = "gCSI_split_0_train.txt"
-val_split_file = "gCSI_split_0_val.txt"
-test_split_file = "gCSI_split_0_test.txt"
-ml_data_outdir = "./ml_data/gCSI-gCSI/split_0"
+train_split_file = "CCLE_split_0_train.txt"
+val_split_file = "CCLE_split_0_val.txt"
+test_split_file = "CCLE_split_0_test.txt"
+ml_data_outdir = "./ml_data/CCLE-CCLE/split_0"
 data_format = ".parquet"
 y_data_files = [["response.tsv"]]
 x_data_canc_files = [["cancer_gene_expression.tsv"]]
@@ -17,9 +17,9 @@ preprocess_debug = False
 preprocess_subset_data = True
 
 [Train]
-train_ml_data_dir = "./ml_data/gCSI-gCSI/split_0"
-val_ml_data_dir = "./ml_data/gCSI-gCSI/split_0"
-model_outdir = "./out_models/gCSI/split_0"
+train_ml_data_dir = "./ml_data/CCLE-CCLE/split_0"
+val_ml_data_dir = "./ml_data/CCLE-CCLE/split_0"
+model_outdir = "./out_models/CCLE/split_0"
 model_file_name = "uno_improve"
 model_file_format = ".py"
 canc_num_layers = 3
@@ -109,7 +109,7 @@ interaction_layer_9_activation = "relu"
 epochs = 150
 batch_size = 16
 val_batch = 256
-raw_max_lr = 1e-8
+raw_max_lr = 5e-8
 lr_log_10_range = 3
 warmup_epochs = 5
 warmup_type = "quadratic"
@@ -126,7 +126,7 @@ train_debug = False
 train_subset_data = True
 
 [Infer]
-test_ml_data_dir = "./ml_data/gCSI-gCSI/split_0"
-model_dir = "./out_models/gCSI/split_0"
-infer_outdir = "./out_infer/gCSI-gCSI/split_0"
+test_ml_data_dir = "./ml_data/CCLE-CCLE/split_0"
+model_dir = "./out_models/CCLE/split_0"
+infer_outdir = "./out_infer/CCLE-CCLE/split_0"
 test_batch = 256
