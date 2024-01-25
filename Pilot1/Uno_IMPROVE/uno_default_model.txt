@@ -1,5 +1,6 @@
 [Global_Params]
 model_name = "UNO"
+y_col_name = "auc"
 
 [Preprocess]
 train_split_file = "CCLE_split_0_train.txt"

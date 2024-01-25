@@ -360,7 +360,7 @@ def run(params: Dict):
     ).dfs["response.tsv"] # Note: Study column is integer but expects str giving warning
     rsp = pd.concat([rsp_tr, rsp_vl], axis=0)
     # Only keep relevant parts of response
-    rsp = rsp[[params["canc_col_name"], params["drug_col_name"], 'auc']]
+    rsp = rsp[[params["canc_col_name"], params["drug_col_name"], params["y_col_name"]]]
 
     # Keep only common samples between canc, drug, and response
     ge_sub, md_sub, rsp_sub = get_common_samples(
@@ -427,7 +427,7 @@ def run(params: Dict):
             "response.tsv"
         ]
         # Only keep relevant parts of response
-        rsp = rsp[[params["canc_col_name"], params["drug_col_name"], 'auc']]
+        rsp = rsp[[params["canc_col_name"], params["drug_col_name"], params["y_col_name"]]]
 
         # Keep only common samples between canc, drug, and response
         ge_sub, md_sub, rsp_sub = get_common_samples(
@@ -485,12 +485,12 @@ def run(params: Dict):
         merged_df = merged_df.merge(md_sc, on=params["drug_col_name"], how="inner")
         merged_df = merged_df.sample(frac=1.0).reset_index(drop=True)
 
-        ydf = merged_df[['improve_sample_id', 'improve_chem_id', 'auc']]
+        ydf = merged_df[['improve_sample_id', 'improve_chem_id', params["y_col_name"]]]
         merged_df.drop(['improve_sample_id', 'improve_chem_id'], axis=1, inplace=True)
 
         temp_end_time = time.time()
         print_duration(f"Merging {stage.capitalize()} Dataframes", temp_start_time, temp_end_time)
-        print(stage.capitalize(), " merged data --> ", merged_df.shape, "\n")
+        print(stage.capitalize(), "merged data -->", merged_df.shape, "\n")
 
 
         # Show dataframes if on debug mode

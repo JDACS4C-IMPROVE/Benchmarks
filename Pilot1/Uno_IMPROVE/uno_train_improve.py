@@ -639,7 +639,6 @@ class R2Callback(Callback):
         # Logging
         logs["r2_train"] = r2_train
         logs["r2_val"] = r2_val
-        print(f"Epoch {epoch+1}: R2 train: {r2_train:.4f}, R2 val: {r2_val:.4f}")
 
 
 def run(params: Dict):
@@ -779,8 +778,7 @@ def run(params: Dict):
     y_test = ts_data.iloc[:, 0]
 
     # Batch the dataset for training
-    train_data = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(batch_size)
-
+    train_data = tf.data.Dataset.from_tensor_slices((x_train, y_train)).shuffle(len(x_train)).batch(batch_size)
 
     # Identify the Feature Sets
     ge_columns = [col for col in x_train.columns if col.startswith('ge')]

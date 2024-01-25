@@ -9,12 +9,14 @@ from typing import Dict
 from improve import framework as frm
 from improve.metrics import compute_metrics
 
-import numpy as np
+# Additional imports
 import pandas as pd
-import tensorflow as tf
-from keras.models import Model
 from tensorflow.keras.models import load_model
 from sklearn.metrics import r2_score
+
+# [Req] Imports from preprocess and train scripts
+from uno_preprocess_improve import preprocess_params
+from uno_train_improve import metrics_list, train_params
 
 # Should we have preprocessing or assumed done before?
 # from sklearn.preprocessing import (
@@ -36,9 +38,6 @@ filepath = Path(__file__).resolve().parent  # [Req]
 # The values for the parameters in both lists should be specified in a
 # parameter file that is passed as default_model arg in
 # frm.initialize_parameters().
-
-preprocess_params = []
-train_params = []
 
 # 1. App-specific params (App: monotherapy drug response prediction)
 # Currently, there are no app-specific params in this script.
@@ -79,30 +78,18 @@ def run(params: Dict):
     # ------------------------------------------------------
     # [Req] Create data name for test set
     # ------------------------------------------------------
-    # test_data_fname = frm.build_ml_data_name(params, stage="test")
+    test_data_fname = frm.build_ml_data_name(params, stage="test")
 
     # ------------------------------------------------------
     # Load model input data (ML data)
     # ------------------------------------------------------
-    # x_test_data = pd.read_csv(Path(params["test_ml_data_dir"]) / test_data_fname)
+    ts_df = pd.read_parquet(Path(params["test_ml_data_dir"]) / test_data_fname)
 
-    # Test filepaths
-    test_canc_filepath = os.path.join(params["test_ml_data_dir"], "test_x_canc.parquet")
-    test_drug_filepath = os.path.join(params["test_ml_data_dir"], "test_x_drug.parquet")
-    test_y_filepath = os.path.join(params["test_ml_data_dir"], "test_y_data.parquet")
-    # Test reads
-    test_canc_info = pd.read_parquet(test_canc_filepath)
-    test_drug_info = pd.read_parquet(test_drug_filepath)
-    y_test = pd.read_parquet(test_y_filepath)
+    print(ts_df.head())
+    print(ts_df.shape)
 
-    # fea_list = ["ge", "mordred"]
-    # fea_sep = "."
-
-    # Test data
-    # xte = extract_subset_fea(test_data, fea_list=fea_list, fea_sep=fea_sep)
-    # yte = test_data[[params["y_col_name"]]]
-    # print("xte:", xte.shape)
-    # print("yte:", yte.shape)
+    y_ts = ts_df[[params["y_col_name"]]]
+    x_ts = ts_df.drop([params["y_col_name"]], axis=1, inplace=True)
 
     # ------------------------------------------------------
     # Load best model and compute predictions
@@ -114,8 +101,8 @@ def run(params: Dict):
     model = load_model(modelpath)
 
     # Predict
-    test_pred = model.predict([test_canc_info, test_drug_info])
-    test_true = y_test.values
+    test_pred = model.predict(x_ts)
+    test_true = y_ts.values
     print("Type of test_true:", type(test_true))
     print("Type of test_pred:", type(test_pred))
     if isinstance(test_true, np.ndarray):
