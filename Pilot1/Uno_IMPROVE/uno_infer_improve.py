@@ -10,6 +10,7 @@ from improve import framework as frm
 from improve.metrics import compute_metrics
 
 # Additional imports
+import numpy as np
 import pandas as pd
 from tensorflow.keras.models import load_model
 from sklearn.metrics import r2_score
@@ -85,11 +86,8 @@ def run(params: Dict):
     # ------------------------------------------------------
     ts_df = pd.read_parquet(Path(params["test_ml_data_dir"]) / test_data_fname)
 
-    print(ts_df.head())
-    print(ts_df.shape)
-
     y_ts = ts_df[[params["y_col_name"]]]
-    x_ts = ts_df.drop([params["y_col_name"]], axis=1, inplace=True)
+    ts_df.drop([params["y_col_name"]], axis=1, inplace=True)
 
     # ------------------------------------------------------
     # Load best model and compute predictions
@@ -100,26 +98,20 @@ def run(params: Dict):
     # Load UNO
     model = load_model(modelpath)
 
-    # Predict
-    test_pred = model.predict(x_ts)
-    test_true = y_ts.values
-    print("Type of test_true:", type(test_true))
-    print("Type of test_pred:", type(test_pred))
-    if isinstance(test_true, np.ndarray):
-        print("Shape of test_true:", test_true.shape)
-    if isinstance(test_pred, np.ndarray):
-        print("Shape of test_pred:", test_pred.shape)
+    # Predict and flatten to be accepted by store_predictions
+    test_pred = model.predict(ts_df).flatten()
+    test_true = y_ts.values.flatten()
 
     # ------------------------------------------------------
     # [Req] Save raw predictions in dataframe
     # ------------------------------------------------------
-    # frm.store_predictions_df(
-    #     params,
-    #     y_true=test_true,
-    #     y_pred=test_pred,
-    #     stage="test",
-    #     outdir=params["infer_outdir"],
-    # )
+    frm.store_predictions_df(
+        params,
+        y_true=test_true,
+        y_pred=test_pred,
+        stage="test",
+        outdir=params["infer_outdir"],
+    )
 
     # ------------------------------------------------------
     # [Req] Compute performance scores

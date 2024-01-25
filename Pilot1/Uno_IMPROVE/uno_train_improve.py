@@ -604,6 +604,19 @@ train_params = app_train_params + model_train_params
 metrics_list = ["mse", "rmse", "pcc", "scc", "r2"]
 
 
+def print_duration(activity: str, start_time: float, end_time: float):
+    """
+    activity (str): Description of the activity.
+    duration (int): Duration in minutes.
+    """
+    duration = end_time - start_time
+    hours = int(duration // 3600)
+    minutes = int((duration % 3600) // 60)
+    seconds = int(duration % 60)
+
+    print(f"Time for {activity}: {hours} hours, {minutes} minutes, and {seconds} seconds\n")
+
+
 def warmup_scheduler(epoch, lr, warmup_epochs, initial_lr, max_lr, warmup_type):
     if epoch <= warmup_epochs:
         if warmup_type == "linear":
@@ -869,22 +882,22 @@ def run(params: Dict):
 
     model.save(modelpath)
 
-    # Compute predictions
-    val_pred = model.predict(x_val)
-    val_true = y_val.values
-    test_pred = model.predict(x_test)
-    test_true = y_test.values
+    # Compute predictions and flatten to be accepted by store_predictions
+    val_pred = model.predict(x_val).flatten()
+    val_true = y_val.values.flatten()
+    test_pred = model.predict(x_test).flatten()
+    test_true = y_test.values.flatten()
 
     # ------------------------------------------------------
     # [Req] Save raw predictions in dataframe
     # ------------------------------------------------------
-    # frm.store_predictions_df(
-    #     params,
-    #     y_true=val_true,
-    #     y_pred=val_pred,
-    #     stage="val",
-    #     outdir=params["model_outdir"],
-    # )
+    frm.store_predictions_df(
+        params,
+        y_true=val_true,
+        y_pred=val_pred,
+        stage="val",
+        outdir=params["model_outdir"],
+    )
 
     # ------------------------------------------------------
     # [Req] Compute performance scores
@@ -923,8 +936,8 @@ def main(args):
     )
     run(params)
     train_end_time = time.time()
-    print(f'Time per epoch: {time_per_epoch} seconds')
-    print(f"Training Time = {train_end_time - train_start_time} seconds")
+    print_duration("One epoch", 0, time_per_epoch)
+    print_duration("Total Training", train_start_time, train_end_time)
     print("\nFinished model training.")
 
 
