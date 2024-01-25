@@ -13,7 +13,7 @@ x_data_drug_files = [["drug_mordred.tsv"]]
 use_lincs = False
 ge_scaling = "std"
 md_scaling = "std"
-preprocess_debug = True
+preprocess_debug = False
 preprocess_subset_data = False
 
 [Train]
