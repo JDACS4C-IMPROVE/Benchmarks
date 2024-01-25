@@ -126,7 +126,7 @@ preprocess_params = app_preproc_params + model_preproc_params
 # ------------------------------------------------------------
 
 
-def print_duration(activity, start_time, end_time):
+def print_duration(activity: str, start_time: float, end_time: float):
     """
     activity (str): Description of the activity.
     duration (int): Duration in minutes.
@@ -139,6 +139,7 @@ def print_duration(activity, start_time, end_time):
     print(f"Time for {activity}: {hours} hours, {minutes} minutes, and {seconds} seconds\n")
 
 
+# TO-DO related to lincs
 def gene_selection(df: pd.DataFrame, genes_fpath: Union[Path, str], canc_col_name: str):
     """Takes a dataframe omics data (e.g., gene expression) and retains only
     the genes specified in genes_fpath.
@@ -151,6 +152,67 @@ def gene_selection(df: pd.DataFrame, genes_fpath: Union[Path, str], canc_col_nam
     # genes = drp.common_elements(genes, df.columns[1:])
     cols = [canc_col_name] + genes
     return df[cols]
+
+
+def subset_data(rsp: pd.DataFrame, stage: str, total_num_samples: int, stage_proportions: Dict):
+    # Check for valid stage
+    if stage not in stage_proportions:
+        raise ValueError(f"Unrecognized stage when subsetting data: {stage}")
+    # Check for small datasets
+    naive_num_samples = int(total_num_samples * stage_proportions[stage])
+    stage_num_samples = min(naive_num_samples, rsp.shape[0])
+    # Print info
+    if naive_num_samples >= rsp.shape[0]:
+        print(f"Small {stage.capitalize()} Dataset of Size {stage_num_samples}. "
+        f"Subsetting to {naive_num_samples} Is Skipped")
+    else:
+        print(f"Subsetting {stage} Data To: {stage_num_samples}")
+    # Subset data
+    rsp = rsp.sample(n=stage_num_samples).reset_index(drop=True)
+
+    return rsp
+
+
+def get_common_samples(
+    canc_df: pd.DataFrame,
+    drug_df: pd.DataFrame,
+    rsp_df: pd.DataFrame,
+    canc_col_name: str,
+    drug_col_name: str,
+):
+    """
+    Args:
+        canc_df (pd.Dataframe): cell features df.
+        drug_df (pd.Dataframe): drug features df.
+        rsp_df (pd.Dataframe): drug response df.
+        canc_col_name (str): Column name that contains the cancer sample ids.
+        drug_col_name (str): Column name that contains the drug ids.
+
+    Returns:
+        Cancer, drug, and response dataframes with only the common samples 
+        between them all.
+
+    Justification:
+        When creating scalers, it's important to create on only the drugs/cell
+        lines present in that dataset. Also, filtering unnecessary data before
+        merging saves memory and computation time when later merging
+    """
+    # Filter response according to all
+    rsp_df = rsp_df.merge(
+       canc_df[canc_col_name], on=canc_col_name, how="inner"
+    )
+    rsp_df = rsp_df.merge(
+       drug_df[drug_col_name], on=drug_col_name, how="inner"
+    )
+    # Filter all according to response
+    canc_df = canc_df[
+        canc_df[canc_col_name].isin(rsp_df[canc_col_name])
+    ].reset_index(drop=True)
+    drug_df = drug_df[
+        drug_df[drug_col_name].isin(rsp_df[drug_col_name])
+    ].reset_index(drop=True)
+
+    return canc_df, drug_df, rsp_df
 
 
 def scale_df(
@@ -212,48 +274,6 @@ def scale_df(
     # Copy back scaled data to data frame
     df[df_num.columns] = df_norm
     return df, scaler
-
-
-def get_common_samples(
-    canc_df: pd.DataFrame,
-    drug_df: pd.DataFrame,
-    rsp_df: pd.DataFrame,
-    canc_col_name: str,
-    drug_col_name: str,
-):
-    """
-    Args:
-        canc_df (pd.Dataframe): cell features df.
-        drug_df (pd.Dataframe): drug features df.
-        rsp_df (pd.Dataframe): drug response df.
-        canc_col_name (str): Column name that contains the cancer sample ids.
-        drug_col_name (str): Column name that contains the drug ids.
-
-    Returns:
-        Cancer, drug, and response dataframes with only the common samples 
-        between them all.
-
-    Justification:
-        When creating scalers, it's important to create on only the drugs/cell
-        lines present in that dataset. Also, filtering unnecessary data before
-        merging saves memory and computation time when later merging
-    """
-    # Filter response according to all
-    rsp_df = rsp_df.merge(
-       canc_df[canc_col_name], on=canc_col_name, how="inner"
-    )
-    rsp_df = rsp_df.merge(
-       drug_df[drug_col_name], on=drug_col_name, how="inner"
-    )
-    # Filter all according to response
-    canc_df = canc_df[
-        canc_df[canc_col_name].isin(rsp_df[canc_col_name])
-    ].reset_index(drop=True)
-    drug_df = drug_df[
-        drug_df[drug_col_name].isin(rsp_df[drug_col_name])
-    ].reset_index(drop=True)
-
-    return canc_df, drug_df, rsp_df
 
 
 def run(params: Dict):
@@ -447,22 +467,13 @@ def run(params: Dict):
         # The implementation of this step depends on the model.
         # --------------------------------
             
-        # Subset data if desired
+        # Shuffle data / subset if setting true (for testing)
         if params["preprocess_subset_data"]:
             # Define the total number of samples and the proportions for each stage
             total_num_samples = 5000
-            stage_proportions = {"train": 0.8, "val": 0.1, "test": 0.1}
-
-            # Calculate the number of samples for the current stage
-            if stage not in stage_proportions:
-                raise ValueError(f"Unrecognized stage when subsetting data: {stage}")
-            
-            # Make sure number samples is int and doesn't exceed the dataset size
-            stage_num_samples = int(total_num_samples * stage_proportions[stage])
-            stage_num_samples = min(stage_num_samples, rsp.shape[0])
-
-            # Sample the specified number of rows
-            rsp = rsp.sample(n=stage_num_samples).reset_index(drop=True)
+            stage_proportions = {"train": 0.8, "val": 0.1, "test": 0.1}   # should represent proportions given
+            # Shuffle with num_samples set by total and stage
+            rsp = subset_data(rsp, stage, total_num_samples, stage_proportions)
         else:
             # No subsetting, shuffle the whole dataset
             rsp = rsp.sample(frac=1).reset_index(drop=True)

@@ -741,32 +741,47 @@ def run(params: Dict):
     # Subsetting the data for faster training if desired
     if params["train_subset_data"]:
         # Subset 5000 samples (or all for small datasets)
-        total_num_samples = min(5000, tr_data.shape[0] + vl_data.shape[0], ts_data.shape[0])
+        total_num_samples = 5000
         dataset_proportions = {"train": 0.8, "validation": 0.1, "test": 0.1}
-        num_samples = {dataset: int(total_num_samples * proportion) for dataset, proportion in dataset_proportions.items()}
-        print(num_samples)
-        # Subsetting the datasets
-        tr_data = tr_data.sample(n=num_samples["train"]).reset_index(drop=True)
-        vl_data = vl_data.sample(n=num_samples["validation"]).reset_index(drop=True)
-        ts_data = ts_data.sample(n=num_samples["test"]).reset_index(drop=True) 
+        dataset_size = tr_data.shape[0] + vl_data.shape[0] + ts_data.shape[0]
+        if total_num_samples >= dataset_size:
+            print(f"Small Dataset of Size {dataset_size}. "
+            f"Subsetting to {total_num_samples} Is Skipped")
+        else:
+            num_samples = {dataset: int(total_num_samples * proportion) for dataset, proportion in dataset_proportions.items()}
+            print(f"Subsetting Data To: {num_samples}")
+            # Subsetting the datasets
+            tr_data = tr_data.sample(n=num_samples["train"]).reset_index(drop=True)
+            vl_data = vl_data.sample(n=num_samples["validation"]).reset_index(drop=True)
+            ts_data = ts_data.sample(n=num_samples["test"]).reset_index(drop=True) 
 
     # Show data in debug mode
     if params["train_debug"]:
+        print("TRAIN DATA:")
         print(tr_data.head())
+        print(tr_data.shape)
+        print("")
+        print("VAL DATA:")
         print(vl_data.head())
+        print(vl_data.shape)
+        print("")
+        print("TEST DATA:")        
         print(ts_data.head())
+        print(ts_data.shape)
+        print("")
 
-    # Separate input and target
-    x_train = tr_data.iloc[:, :-1]
-    y_train = tr_data.iloc[:, -1]
-    x_val = vl_data.iloc[:, :-1]
-    y_val = vl_data.iloc[:, -1]
-    x_test = ts_data.iloc[:, :-1]
-    y_test = ts_data.iloc[:, -1]  
+    # Separate input (features) and target
+    x_train = tr_data.iloc[:, 1:]
+    y_train = tr_data.iloc[:, 0]
+    x_val = vl_data.iloc[:, 1:]
+    y_val = vl_data.iloc[:, 0]
+    x_test = ts_data.iloc[:, 1:]
+    y_test = ts_data.iloc[:, 0]
+
 
     # Identify the Feature Sets
     ge_columns = [col for col in x_train.columns if col.startswith('ge')]
-    md_columns = [col for col in x_train.columns if col.startswith('md')]
+    md_columns = [col for col in x_train.columns if col.startswith('mordred')]
     # Slice the input tensor
     all_input = Input(shape=(len(ge_columns) + len(md_columns),), name="all_input")
     canc_input = Lambda(lambda x: x[:, :len(ge_columns)])(all_input)
@@ -849,8 +864,8 @@ def run(params: Dict):
     # Calculate the time per epoch
     epoch_end_time = time.time()
     total_epochs = len(history.history['loss'])  # Get the actual number of epochs
+    global time_per_epoch 
     time_per_epoch = (epoch_end_time - epoch_start_time) / total_epochs
-    print(f'Time per epoch: {time_per_epoch} seconds')
 
     model.save(modelpath)
 
@@ -908,6 +923,7 @@ def main(args):
     )
     run(params)
     train_end_time = time.time()
+    print(f'Time per epoch: {time_per_epoch} seconds')
     print(f"Training Time = {train_end_time - train_start_time} seconds")
     print("\nFinished model training.")
 
