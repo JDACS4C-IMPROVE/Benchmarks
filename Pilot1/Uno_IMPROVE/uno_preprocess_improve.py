@@ -214,92 +214,46 @@ def scale_df(
     return df, scaler
 
 
-def compose_data_arrays(
-    df_cell: pd.DataFrame,
-    df_drug: pd.DataFrame,
-    df_response: pd.DataFrame,
+def get_common_samples(
+    canc_df: pd.DataFrame,
+    drug_df: pd.DataFrame,
+    rsp_df: pd.DataFrame,
     canc_col_name: str,
     drug_col_name: str,
-    stage: str,
-    preprocess_subset_data = False,
-    random_state = None
 ):
-    """Returns drug and cancer feature data, and response values.
-
+    """
     Args:
-        df_cell (pd.Dataframe): cell features df.
-        df_drug (pd.Dataframe): drug features df.
-        df_response (pd.Dataframe): drug response df. This already has been
-            filtered to three columns: cell_id, drug_id and drug_response.
+        canc_df (pd.Dataframe): cell features df.
+        drug_df (pd.Dataframe): drug features df.
+        rsp_df (pd.Dataframe): drug response df.
         canc_col_name (str): Column name that contains the cancer sample ids.
         drug_col_name (str): Column name that contains the drug ids.
 
     Returns:
-        pd.Dataframe: combined dataframe with each row containing cell features,
-            drug features, and response
+        Cancer, drug, and response dataframes with only the common samples 
+        between them all.
 
     Justification:
-        According to some searching, appending to a list and then converting to a
-        dataframe is faster than appending to a dataframe for very large sets
+        When creating scalers, it's important to create on only the drugs/cell
+        lines present in that dataset. Also, filtering unnecessary data before
+        merging saves memory and computation time when later merging
     """
-    combined_data = []
-    target_data = []
+    # Filter response according to all
+    rsp_df = rsp_df.merge(
+       canc_df[canc_col_name], on=canc_col_name, how="inner"
+    )
+    rsp_df = rsp_df.merge(
+       drug_df[drug_col_name], on=drug_col_name, how="inner"
+    )
+    # Filter all according to response
+    canc_df = canc_df[
+        canc_df[canc_col_name].isin(rsp_df[canc_col_name])
+    ].reset_index(drop=True)
+    drug_df = drug_df[
+        drug_df[drug_col_name].isin(rsp_df[drug_col_name])
+    ].reset_index(drop=True)
 
-    # Subset data if desired
-    if preprocess_subset_data:
-        # Subset 5000 samples (or all for small datasets)
-        total_num_samples = 5000
-        stage_proportions = {"train": 0.8, "val": 0.1, "test": 0.1}
-        stage_num_samples = min(total_num_samples * stage_proportions.get(stage), df_response.shape[0])
-        # Value check
-        if stage_num_samples is None:
-            raise ValueError(f"""
-                             Unrecognized stage by composing_data_arrays 
-                             function when trying to subset: {stage}""")
-        # Set frac accordingly
-        frac = stage_num_samples / df_response.shape[0]
-    else:
-        frac = 1
-
-    # Shuffle response data (fraction will be smaller if subsetting)
-    df_response = df_response.sample(frac=frac, random_state=random_state).reset_index(drop=True)
-
-    # Set indices
-    df_cell = df_cell.set_index([canc_col_name])
-    df_drug = df_drug.set_index([drug_col_name])
-
-    # Create cell and drug column names. Necessary to save data in 1 file and then load into block-module design (knowing which columns go where)
-    cell_column_names = [f'ge{i}' for i in range(df_cell.shape[1])]
-    drug_column_names = [f'md{i}' for i in range(df_drug.shape[1])]
-    response_column_name = [df_response.columns[2]]
-    column_names = cell_column_names + drug_column_names + response_column_name
-
-    for i in range(df_response.shape[0]):  # tuples of (cell id, drug name, response)
-        if i > 0 and (i % 15000 == 0):
-            print(i)
-        cell, drug, rsp = df_response.iloc[i, :].values.tolist()
-
-        # Check for missing of corrupted data
-        if np.isnan(rsp): # Check for nan value of response
-            raise ValueError(f"Response value is NaN at index {i}")
-        try:  # Look for drug and cell features
-            drug_features = df_drug.loc[drug]
-            cell_features = df_cell.loc[cell]
-        except KeyError as e:  # drug or cell not found
-            print(f"Missing data at index {i}: {e}")
-            continue  # Skip this iteration and move to the next row
-
-        combined_data_row = list(cell_features.values) + list(drug_features.values) + [rsp]
-        target_row = [rsp]
-
-        combined_data.append(combined_data_row)
-        target_data.append(target_row)
-
-    combined_dataframe = pd.DataFrame(combined_data, columns=column_names)
-
-    target_dataframe = pd.DataFrame(target_data, columns=response_column_name)
-
-    return combined_dataframe, target_dataframe 
+    return canc_df, drug_df, rsp_df
 
 
 def run(params: Dict):
@@ -325,10 +279,16 @@ def run(params: Dict):
     # ------------------------------------------------------
     print("\nLoading omics data.")
     omics_obj = drp.OmicsLoader(params)
+    # print(omics_obj)
     gene_expression_file = params["x_data_canc_files"][0][0]
     print("Loading file: ", gene_expression_file)
-    ge = omics_obj.dfs[gene_expression_file]  # return gene expression
+    ge = omics_obj.dfs[gene_expression_file]
     ge["improve_sample_id"] = ge['improve_sample_id'].astype(str)  # To fix mixed dytpes error
+    # Add ge prefix to identify gene expression columns later 
+    # (all but the sample_id first column) (needed to choose block input sizes in train)
+    first_column = ge.iloc[:, :1]
+    rest_columns = ge.iloc[:, 1:].add_prefix('ge.')
+    ge = pd.concat([first_column, rest_columns], axis=1)
     # ------------------------------------------------------
 
     # ------------------------------------------------------
@@ -342,6 +302,7 @@ def run(params: Dict):
     md = md.reset_index()  # Needed to do scaling and merging as wanted
     md["improve_chem_id"] = md['improve_chem_id'].astype(str)  # To fix mixed dytpes error
     # ------------------------------------------------------
+
     temp_end_time = time.time()
     print("")
     print_duration("Loading Data", temp_start_time, temp_end_time)
@@ -381,22 +342,10 @@ def run(params: Dict):
     # Only keep relevant parts of response
     rsp = rsp[[params["canc_col_name"], params["drug_col_name"], 'auc']]
 
-    # Keep only common samples between response, drug, and cancer information
-    # Response
-    rsp_sub = rsp.merge(
-       ge[params["canc_col_name"]], on=params["canc_col_name"], how="inner"
+    # Keep only common samples between canc, drug, and response
+    ge_sub, md_sub, rsp_sub = get_common_samples(
+        ge, md, rsp, params["canc_col_name"], params["drug_col_name"]
     )
-    rsp_sub = rsp_sub.merge(
-       md[params["drug_col_name"]], on=params["drug_col_name"], how="inner"
-    )
-    # Gene expression
-    ge_sub = ge[
-        ge[params["canc_col_name"]].isin(rsp_sub[params["canc_col_name"]])
-    ].reset_index(drop=True)
-    # Mordred descriptors
-    md_sub = md[
-        md[params["drug_col_name"]].isin(rsp_sub[params["drug_col_name"]])
-    ].reset_index(drop=True)
 
     # Check shapes if debug mode on
     if params["preprocess_debug"]:
@@ -417,13 +366,13 @@ def run(params: Dict):
     # to common treatments/cell lines
     print("\nCreating Feature Scalers\n")
 
-    # Scale gene expression
+    # Create gene expression scaler
     _, ge_scaler = scale_df(ge_sub, scaler_name=params["ge_scaling"])
     ge_scaler_fpath = Path(params["ml_data_outdir"]) / params["ge_scaler_fname"]
     joblib.dump(ge_scaler, ge_scaler_fpath)
     print("Scaler object for gene expression: ", ge_scaler_fpath)
 
-    # Scale Mordred descriptors
+    # Create mordred descriptor scaler
     _, md_scaler = scale_df(md_sub, scaler_name=params["md_scaling"])
     md_scaler_fpath = Path(params["ml_data_outdir"]) / params["md_scaler_fname"]
     joblib.dump(md_scaler, md_scaler_fpath)
@@ -432,7 +381,7 @@ def run(params: Dict):
     del rsp, rsp_tr, rsp_vl, ge_sub, md_sub   # Clean Up
     # ------------------------------------------------------
     temp_end_time = time.time()
-    print_duration("Creating Scaler", temp_start_time, temp_end_time)
+    print_duration("Creating Scalers", temp_start_time, temp_end_time)
 
 
     # ------------------------------------------------------
@@ -460,22 +409,10 @@ def run(params: Dict):
         # Only keep relevant parts of response
         rsp = rsp[[params["canc_col_name"], params["drug_col_name"], 'auc']]
 
-        # Keep only common samples between response, drug, and cancer information
-        # Response
-        rsp_sub = rsp.merge(
-            ge[params["canc_col_name"]], on=params["canc_col_name"], how="inner"
+        # Keep only common samples between canc, drug, and response
+        ge_sub, md_sub, rsp_sub = get_common_samples(
+            ge, md, rsp, params["canc_col_name"], params["drug_col_name"]
         )
-        rsp_sub = rsp_sub.merge(
-            md[params["drug_col_name"]], on=params["drug_col_name"], how="inner"
-        )
-        # Gene Expression
-        ge_sub = ge[
-            ge[params["canc_col_name"]].isin(rsp_sub[params["canc_col_name"]])
-        ].reset_index(drop=True)
-        # Mordred Descriptors
-        md_sub = md[
-            md[params["drug_col_name"]].isin(rsp_sub[params["drug_col_name"]])
-        ].reset_index(drop=True)
 
         # Check shapes if debug mode on
         if params["preprocess_debug"]:
@@ -509,31 +446,56 @@ def run(params: Dict):
         # [Req] Save ML data files in params["ml_data_outdir"]
         # The implementation of this step depends on the model.
         # --------------------------------
+            
+        # Subset data if desired
+        if params["preprocess_subset_data"]:
+            # Define the total number of samples and the proportions for each stage
+            total_num_samples = 5000
+            stage_proportions = {"train": 0.8, "val": 0.1, "test": 0.1}
 
-        # Compose data
+            # Calculate the number of samples for the current stage
+            if stage not in stage_proportions:
+                raise ValueError(f"Unrecognized stage when subsetting data: {stage}")
+            
+            # Make sure number samples is int and doesn't exceed the dataset size
+            stage_num_samples = int(total_num_samples * stage_proportions[stage])
+            stage_num_samples = min(stage_num_samples, rsp.shape[0])
+
+            # Sample the specified number of rows
+            rsp = rsp.sample(n=stage_num_samples).reset_index(drop=True)
+        else:
+            # No subsetting, shuffle the whole dataset
+            rsp = rsp.sample(frac=1).reset_index(drop=True)
+
+        # Merging data
         temp_start_time = time.time()
-        print("Composing Data")
-        combined_df, y_df = compose_data_arrays(
-            ge_sc, md_sc, rsp_sub, params["canc_col_name"], params["drug_col_name"], stage, params["preprocess_subset_data"]
-        )
+        print("Merging Data")
+        merged_df = rsp.merge(ge_sc, on=params["canc_col_name"], how="inner")
+        merged_df = merged_df.merge(md_sc, on=params["drug_col_name"], how="inner")
+        merged_df = merged_df.sample(frac=1.0).reset_index(drop=True)
+
+        ydf = merged_df[['improve_sample_id', 'improve_chem_id', 'auc']]
+        merged_df.drop(['improve_sample_id', 'improve_chem_id'], axis=1, inplace=True)
+
         temp_end_time = time.time()
-        print_duration(f"Composing {stage.capitalize()} Dataframes", temp_start_time, temp_end_time)
-        print(stage.capitalize(), "Final combined data --> ", combined_df.shape, "\n")
+        print_duration(f"Merging {stage.capitalize()} Dataframes", temp_start_time, temp_end_time)
+        print(stage.capitalize(), " merged data --> ", merged_df.shape, "\n")
+
 
         # Show dataframes if on debug mode
         if params["preprocess_debug"]:
-            print("Final Combined Data:")
-            print(combined_df.head())
+            print("Final merged Data:")
+            print(merged_df.head())
             print("")
 
         # Save final dataframe to the constructed file paths
         temp_start_time = time.time()
-        print("Save Final Data to Parquet")
+        print(f"Saving {stage.capitalize()} Data to Parquet")
         # [Req] Build data name
         data_fname = frm.build_ml_data_name(params, stage)
-        combined_df.to_parquet(Path(params["ml_data_outdir"])/data_fname)
+        merged_df.to_parquet(Path(params["ml_data_outdir"])/data_fname)
         # [Req] Save y dataframe for the current stage
-        frm.save_stage_ydf(y_df, params, stage)
+        frm.save_stage_ydf(ydf, params, stage)
         temp_end_time = time.time()
         print_duration(f"Saving {stage.capitalize()} Dataframes", temp_start_time, temp_end_time)
 
