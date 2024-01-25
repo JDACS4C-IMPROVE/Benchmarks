@@ -778,6 +778,9 @@ def run(params: Dict):
     x_test = ts_data.iloc[:, 1:]
     y_test = ts_data.iloc[:, 0]
 
+    # Batch the dataset for training
+    train_data = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(batch_size)
+
 
     # Identify the Feature Sets
     ge_columns = [col for col in x_train.columns if col.startswith('ge')]
@@ -853,8 +856,7 @@ def run(params: Dict):
 
     # Training the model
     history = model.fit(
-        x_train,
-        y_train,
+        train_data,
         validation_data=(x_val, y_val),
         epochs=epochs,
         batch_size=batch_size,
