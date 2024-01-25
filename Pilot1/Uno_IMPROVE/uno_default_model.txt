@@ -8,12 +8,12 @@ test_split_file = "CCLE_split_0_test.txt"
 ml_data_outdir = "./ml_data/CCLE-CCLE/split_0"
 data_format = ".parquet"
 y_data_files = [["response.tsv"]]
-x_data_canc_files = [["cancer_gene_expression.tsv"]]
+x_data_canc_files = [["cancer_gene_expression.tsv",  ["Gene_Symbol"]]]
 x_data_drug_files = [["drug_mordred.tsv"]]
 use_lincs = False
 ge_scaling = "std"
 md_scaling = "std"
-preprocess_debug = False
+preprocess_debug = True
 preprocess_subset_data = False
 
 [Train]
