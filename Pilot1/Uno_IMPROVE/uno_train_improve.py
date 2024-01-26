@@ -612,53 +612,6 @@ train_params = app_train_params + model_train_params
 metrics_list = ["mse", "rmse", "pcc", "scc", "r2"]
 
 
-def warmup_scheduler(epoch, lr, warmup_epochs, initial_lr, max_lr, warmup_type):
-    if epoch <= warmup_epochs:
-        if warmup_type == "linear":
-            lr = initial_lr + (max_lr - initial_lr) * epoch / warmup_epochs
-        elif warmup_type == "quadratic":
-            lr = initial_lr + (max_lr - initial_lr) * ((epoch / warmup_epochs) ** 2)
-        elif warmup_type == "exponential":
-            lr = initial_lr * ((max_lr / initial_lr) ** (epoch / warmup_epochs))
-        else:
-            raise ValueError("Invalid warmup type")
-    return float(lr)  # Ensure returning a float value
-
-
-class R2Callback(Callback):
-    def __init__(self, train_data_generator, val_data_generator, steps_per_epoch, validation_steps):
-        super().__init__()
-        self.train_data_generator = train_data_generator
-        self.val_data_generator = val_data_generator
-        self.steps_per_epoch = steps_per_epoch
-        self.validation_steps = validation_steps
-
-    def on_epoch_end(self, epoch, logs=None):
-        r2_train = self.compute_r2(self.train_data_generator, self.steps_per_epoch)
-        r2_val = self.compute_r2(self.val_data_generator, self.validation_steps)
-        
-        logs["r2_train"] = r2_train
-        logs["r2_val"] = r2_val
-
-    def compute_r2(self, data_generator, steps):
-        ss_res, ss_tot, y_mean, count = 0, 0, 0, 0
-        for _ in range(steps):
-            x, y_true = next(data_generator)
-            y_pred = self.model.predict(x, verbose=0)
-            
-            ss_res += np.sum((y_true - y_pred) ** 2)
-            y_mean += np.sum(y_true)
-            count += len(y_true)
-
-        y_mean /= count
-        for _ in range(steps):
-            _, y_true = next(data_generator)
-            ss_tot += np.sum((y_true - y_mean) ** 2)
-
-        r2 = 1 - (ss_res / ss_tot)
-        return r2
-
-
 def train_gen(x_train, y_train, batch_size):
     """
     A generator function for creating batches of training data.
@@ -711,13 +664,47 @@ def batch_predict(model, data_generator, steps, flatten=True):
     true_values = []
     for _ in range(steps):
         x, y = next(data_generator)
-        pred = model.predict(x)
+        pred = model.predict(x, verbose=0)
         if flatten:
             pred = pred.flatten()
             y = y.flatten()
         predictions.extend(pred)
         true_values.extend(y)
     return np.array(predictions), np.array(true_values)
+
+
+def warmup_scheduler(epoch, lr, warmup_epochs, initial_lr, max_lr, warmup_type):
+    if epoch <= warmup_epochs:
+        if warmup_type == "linear":
+            lr = initial_lr + (max_lr - initial_lr) * epoch / warmup_epochs
+        elif warmup_type == "quadratic":
+            lr = initial_lr + (max_lr - initial_lr) * ((epoch / warmup_epochs) ** 2)
+        elif warmup_type == "exponential":
+            lr = initial_lr * ((max_lr / initial_lr) ** (epoch / warmup_epochs))
+        else:
+            raise ValueError("Invalid warmup type")
+    return float(lr)  # Ensure returning a float value
+
+
+class R2Callback(Callback):
+    def __init__(self, train_data_generator, val_data_generator, steps_per_epoch, validation_steps):
+        super().__init__()
+        self.train_data_generator = train_data_generator
+        self.val_data_generator = val_data_generator
+        self.steps_per_epoch = steps_per_epoch
+        self.validation_steps = validation_steps
+
+    def on_epoch_end(self, epoch, logs=None):
+        r2_train = self.compute_r2(self.train_data_generator, self.steps_per_epoch)
+        r2_val = self.compute_r2(self.val_data_generator, self.validation_steps)
+        
+        logs["r2_train"] = r2_train
+        logs["r2_val"] = r2_val
+
+    def compute_r2(self, data_generator, steps):
+        y_pred, y_true = batch_predict(self.model, data_generator, steps, flatten=True)
+        r2 = r2_score(y_true, y_pred)
+        return r2
 
 
 def run(params: Dict):
@@ -910,17 +897,17 @@ def run(params: Dict):
         loss="mean_squared_error",
     )
 
-    # Instantiate the R2 callback
-    r2_callback = R2Callback(train_data, val_data_generator, steps_per_epoch, validation_steps)
+    
+    # Instantiate callbacks
 
-    # Learning rate scheduler callback
+    # Learning rate scheduler
     lr_scheduler = LearningRateScheduler(
         lambda epoch: warmup_scheduler(
             epoch, model.optimizer.lr, warmup_epochs, initial_lr, max_lr, warmup_type
         )
     )
 
-    # Reduce learing rate callback
+    # Reduce learing rate
     reduce_lr = ReduceLROnPlateau(
         monitor="val_loss",
         factor=reduce_lr_factor,
@@ -928,7 +915,7 @@ def run(params: Dict):
         min_lr=min_lr,
     )
 
-    # Early stopping callback
+    # Early stopping
     early_stopping = EarlyStopping(
         monitor="val_loss",
         patience=early_stopping_patience,
@@ -936,6 +923,10 @@ def run(params: Dict):
         verbose=1,
         restore_best_weights=True,
     )
+
+    # R2
+    r2_callback = R2Callback(train_data, val_data_generator, steps_per_epoch, validation_steps)
+
 
     epoch_start_time = time.time()
 
@@ -962,16 +953,24 @@ def run(params: Dict):
     val_pred, val_true = batch_predict(model, val_data_generator, validation_steps)
     test_pred, test_true = batch_predict(model, test_data_generator, test_steps)
 
+    # Print the shapes to verify they match
+    print("Validation predictions shape:", val_pred.shape)
+    print("Validation true values shape:", val_true.shape)
+    print("Test predictions shape:", test_pred.shape)
+    print("Test true values shape:", test_true.shape)
+
+
     # ------------------------------------------------------
     # [Req] Save raw predictions in dataframe
     # ------------------------------------------------------
-    frm.store_predictions_df(
-        params,
-        y_true=val_true,
-        y_pred=val_pred,
-        stage="val",
-        outdir=params["model_outdir"],
-    )
+    if not params["train_subset_data"]:   # temporary fix. incompatible function with subsetting
+        frm.store_predictions_df(
+            params,
+            y_true=val_true,
+            y_pred=val_pred,
+            stage="val",
+            outdir=params["model_outdir"],
+        )
 
     # ------------------------------------------------------
     # [Req] Compute performance scores
