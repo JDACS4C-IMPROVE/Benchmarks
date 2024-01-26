@@ -58,6 +58,19 @@ infer_params = app_infer_params + model_infer_params
 metrics_list = ["mse", "rmse", "pcc", "scc", "r2"]
 
 
+def print_duration(activity: str, start_time: float, end_time: float):
+    """
+    activity (str): Description of the activity.
+    duration (int): Duration in minutes.
+    """
+    duration = end_time - start_time
+    hours = int(duration // 3600)
+    minutes = int((duration % 3600) // 60)
+    seconds = int(duration % 60)
+
+    print(f"Time for {activity}: {hours} hours, {minutes} minutes, and {seconds} seconds\n")
+
+
 # [Req]
 def run(params: Dict):
     """Run model inference.
@@ -143,7 +156,7 @@ def main(args):
     )
     test_scores = run(params)
     infer_end_time = time.time()
-    print(f"Infer Time = {infer_end_time - infer_start_time} seconds")
+    print_duration("Infering", infer_start_time, infer_end_time)
     print("\nFinished model inference.")
 
 
