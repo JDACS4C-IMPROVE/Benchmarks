@@ -680,17 +680,44 @@ def train_gen(x_train, y_train, batch_size):
             yield (batch_x, batch_y)
 
 
-def val_gen(x_val, y_val, val_batch_size):
+def val_gen(x_val, y_val, val_batch):
     num_samples = len(x_val)
     while True:  # Loop indefinitely
-        for offset in range(0, num_samples, val_batch_size):
+        for offset in range(0, num_samples, val_batch):
             # Calculate end of the current batch
-            end = offset + val_batch_size
+            end = offset + val_batch
             # Generate batches
-            batch_x = x_val[offset:offset + val_batch_size]
-            batch_y = y_val[offset:offset + val_batch_size]
+            batch_x = x_val[offset:end]
+            batch_y = y_val[offset:end]
             # Yield the current batch
             yield (batch_x, batch_y)
+
+
+def test_gen(x_test, y_test, test_batch):
+    num_samples = len(x_test)
+    while True:  # Loop indefinitely
+        for offset in range(0, num_samples, test_batch):
+            # Calculate end of the current batch
+            end = offset + test_batch
+            # Generate batches
+            batch_x = x_test[offset:offset + test_batch]
+            batch_y = y_test[offset:offset + test_batch]
+            # Yield the current batch
+            yield (batch_x, batch_y)
+
+
+def batch_predict(model, data_generator, steps, flatten=True):
+    predictions = []
+    true_values = []
+    for _ in range(steps):
+        x, y = next(data_generator)
+        pred = model.predict(x)
+        if flatten:
+            pred = pred.flatten()
+            y = y.flatten()
+        predictions.extend(pred)
+        true_values.extend(y)
+    return np.array(predictions), np.array(true_values)
 
 
 def run(params: Dict):
@@ -721,7 +748,8 @@ def run(params: Dict):
     # Learning Hyperparams
     epochs = params["epochs"]
     batch_size = params["batch_size"]
-    val_batch_size = params["val_batch_size"]
+    val_batch = params["val_batch"]
+    test_batch = params["test_batch"]
     raw_max_lr = params["raw_max_lr"]
     raw_min_lr = raw_max_lr / (10 ** params["lr_log_10_range"])
     max_lr = raw_max_lr * batch_size
@@ -842,9 +870,12 @@ def run(params: Dict):
 
     # Create batch generators to help with memory issues on large datasets
     train_data = train_gen(x_train, y_train, batch_size)
-    val_data_generator = val_gen(x_val, y_val, val_batch_size)
-    steps_per_epoch = len(x_train) // batch_size   # number of batches in training
-    validation_steps = len(x_val) // val_batch_size   # number of batches in val
+    val_data_generator = val_gen(x_val, y_val, val_batch)
+    test_data_generator = test_gen(x_test, y_test, test_batch)
+    # Number of batches in training/val/test
+    steps_per_epoch = int(np.ceil(len(x_train) // batch_size))
+    validation_steps = int(np.ceil(len(x_val) / val_batch))
+    test_steps = int(np.ceil(len(x_test) / test_batch))
 
     # Cancer expression input and encoding layers
     canc_encoded = canc_input
@@ -927,11 +958,9 @@ def run(params: Dict):
     # Save model
     model.save(modelpath)
 
-    # Compute predictions and flatten to be accepted by store_predictions
-    val_pred = model.predict(x_val).flatten()
-    val_true = y_val.values.flatten()
-    test_pred = model.predict(x_test).flatten()
-    test_true = y_test.values.flatten()
+    # Batch prediction (and flatten inside function)
+    val_pred, val_true = batch_predict(model, val_data_generator, validation_steps)
+    test_pred, test_true = batch_predict(model, test_data_generator, test_steps)
 
     # ------------------------------------------------------
     # [Req] Save raw predictions in dataframe
