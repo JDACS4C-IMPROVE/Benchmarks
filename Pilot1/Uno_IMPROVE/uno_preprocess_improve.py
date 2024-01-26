@@ -5,6 +5,7 @@ import sys
 import os
 from pathlib import Path
 from typing import Dict, List, Union
+from uno_utils_improve import print_duration
 
 # Dependencies: pandas, numpy, joblib, scikit-learn
 
@@ -124,19 +125,6 @@ preprocess_params = app_preproc_params + model_preproc_params
 
 
 # ------------------------------------------------------------
-
-
-def print_duration(activity: str, start_time: float, end_time: float):
-    """
-    activity (str): Description of the activity.
-    duration (int): Duration in minutes.
-    """
-    duration = end_time - start_time
-    hours = int(duration // 3600)
-    minutes = int((duration % 3600) // 60)
-    seconds = int(duration % 60)
-
-    print(f"Time for {activity}: {hours} hours, {minutes} minutes, and {seconds} seconds\n")
 
 
 # TO-DO related to lincs

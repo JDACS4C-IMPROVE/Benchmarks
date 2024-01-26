@@ -15,9 +15,10 @@ import pandas as pd
 from tensorflow.keras.models import load_model
 from sklearn.metrics import r2_score
 
-# [Req] Imports from preprocess and train scripts
+# [Req] Imports from other scripts
 from uno_preprocess_improve import preprocess_params
 from uno_train_improve import metrics_list, train_params
+from uno_utils_improve import print_duration
 
 # Should we have preprocessing or assumed done before?
 # from sklearn.preprocessing import (
@@ -56,19 +57,6 @@ infer_params = app_infer_params + model_infer_params
 
 # [Req] List of metrics names to compute prediction performance scores
 metrics_list = ["mse", "rmse", "pcc", "scc", "r2"]
-
-
-def print_duration(activity: str, start_time: float, end_time: float):
-    """
-    activity (str): Description of the activity.
-    duration (int): Duration in minutes.
-    """
-    duration = end_time - start_time
-    hours = int(duration // 3600)
-    minutes = int((duration % 3600) // 60)
-    seconds = int(duration % 60)
-
-    print(f"Time for {activity}: {hours} hours, {minutes} minutes, and {seconds} seconds\n")
 
 
 # [Req]

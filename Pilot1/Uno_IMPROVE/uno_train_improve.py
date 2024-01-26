@@ -5,9 +5,9 @@ import sys
 from pathlib import Path
 from typing import Dict
 
-# import uno as benchmark
 from improve import framework as frm
 from improve.metrics import compute_metrics
+from uno_utils_improve import print_duration
 import candle
 
 import numpy as np
@@ -602,19 +602,6 @@ train_params = app_train_params + model_train_params
 
 # [Req] List of metrics names to compute prediction performance scores
 metrics_list = ["mse", "rmse", "pcc", "scc", "r2"]
-
-
-def print_duration(activity: str, start_time: float, end_time: float):
-    """
-    activity (str): Description of the activity.
-    duration (int): Duration in minutes.
-    """
-    duration = end_time - start_time
-    hours = int(duration // 3600)
-    minutes = int((duration % 3600) // 60)
-    seconds = int(duration % 60)
-
-    print(f"Time for {activity}: {hours} hours, {minutes} minutes, and {seconds} seconds\n")
 
 
 def warmup_scheduler(epoch, lr, warmup_epochs, initial_lr, max_lr, warmup_type):
