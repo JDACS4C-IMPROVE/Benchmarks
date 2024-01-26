@@ -13,6 +13,14 @@ import candle
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+# Configure GPU memory growth for big datasets
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)
 from keras.models import Model
 from keras.layers import Input, Dense, Concatenate, Dropout, Lambda
 from sklearn.metrics import r2_score
@@ -618,27 +626,71 @@ def warmup_scheduler(epoch, lr, warmup_epochs, initial_lr, max_lr, warmup_type):
 
 
 class R2Callback(Callback):
-    def __init__(self, train_data, val_data):
+    def __init__(self, train_data_generator, val_data_generator, steps_per_epoch, validation_steps):
         super().__init__()
-        self.train_data = train_data  # Expected to be a tuple of ([inputs], y)
-        self.val_data = val_data  # Expected to be a tuple of ([inputs], y)
+        self.train_data_generator = train_data_generator
+        self.val_data_generator = val_data_generator
+        self.steps_per_epoch = steps_per_epoch
+        self.validation_steps = validation_steps
 
     def on_epoch_end(self, epoch, logs=None):
-        # Unpack the data
-        train_inputs, train_y = self.train_data
-        val_inputs, val_y = self.val_data
-
-        # Predictions
-        y_train_pred = self.model.predict(train_inputs)
-        y_val_pred = self.model.predict(val_inputs)
-
-        # R2 Scores
-        r2_train = r2_score(train_y, y_train_pred)
-        r2_val = r2_score(val_y, y_val_pred)
-
-        # Logging
+        r2_train = self.compute_r2(self.train_data_generator, self.steps_per_epoch)
+        r2_val = self.compute_r2(self.val_data_generator, self.validation_steps)
+        
         logs["r2_train"] = r2_train
         logs["r2_val"] = r2_val
+
+    def compute_r2(self, data_generator, steps):
+        ss_res, ss_tot, y_mean, count = 0, 0, 0, 0
+        for _ in range(steps):
+            x, y_true = next(data_generator)
+            y_pred = self.model.predict(x, verbose=0)
+            
+            ss_res += np.sum((y_true - y_pred) ** 2)
+            y_mean += np.sum(y_true)
+            count += len(y_true)
+
+        y_mean /= count
+        for _ in range(steps):
+            _, y_true = next(data_generator)
+            ss_tot += np.sum((y_true - y_mean) ** 2)
+
+        r2 = 1 - (ss_res / ss_tot)
+        return r2
+
+
+def train_gen(x_train, y_train, batch_size):
+    """
+    A generator function for creating batches of training data.
+
+    :param x_train: NumPy array of training features.
+    :param y_train: NumPy array of training labels.
+    :param batch_size: Size of the batches to be generated.
+    :return: Yields a tuple (batch_x, batch_y) in each iteration.
+    """
+    num_samples = len(x_train)
+    while True:  # Loop indefinitely
+        for offset in range(0, num_samples, batch_size):
+            # Calculate end of the current batch
+            end = offset + batch_size
+            # Generate batches
+            batch_x = x_train[offset:end]
+            batch_y = y_train[offset:end]
+            # Yield the current batch
+            yield (batch_x, batch_y)
+
+
+def val_gen(x_val, y_val, val_batch_size):
+    num_samples = len(x_val)
+    while True:  # Loop indefinitely
+        for offset in range(0, num_samples, val_batch_size):
+            # Calculate end of the current batch
+            end = offset + val_batch_size
+            # Generate batches
+            batch_x = x_val[offset:offset + val_batch_size]
+            batch_y = y_val[offset:offset + val_batch_size]
+            # Yield the current batch
+            yield (batch_x, batch_y)
 
 
 def run(params: Dict):
@@ -669,6 +721,7 @@ def run(params: Dict):
     # Learning Hyperparams
     epochs = params["epochs"]
     batch_size = params["batch_size"]
+    val_batch_size = params["val_batch_size"]
     raw_max_lr = params["raw_max_lr"]
     raw_min_lr = raw_max_lr / (10 ** params["lr_log_10_range"])
     max_lr = raw_max_lr * batch_size
@@ -769,24 +822,29 @@ def run(params: Dict):
         print(ts_data.shape)
         print("")
 
-    # Separate input (features) and target
-    x_train = tr_data.iloc[:, 1:]
-    y_train = tr_data.iloc[:, 0]
-    x_val = vl_data.iloc[:, 1:]
-    y_val = vl_data.iloc[:, 0]
-    x_test = ts_data.iloc[:, 1:]
-    y_test = ts_data.iloc[:, 0]
+    # Identify the Feature Sets from DataFrame
+    num_ge_columns = len([col for col in tr_data.columns if col.startswith('ge')])
+    num_md_columns = len([col for col in tr_data.columns if col.startswith('mordred')])
 
-    # Batch the dataset for training
-    train_data = tf.data.Dataset.from_tensor_slices((x_train, y_train)).shuffle(len(x_train)).batch(batch_size)
+    # Separate input (features) and target and convert to numpy arrays
+    # (better for tensorflow)
+    x_train = tr_data.iloc[:, 1:].to_numpy()
+    y_train = tr_data.iloc[:, 0].to_numpy()
+    x_val = vl_data.iloc[:, 1:].to_numpy()
+    y_val = vl_data.iloc[:, 0].to_numpy()
+    x_test = ts_data.iloc[:, 1:].to_numpy()
+    y_test = ts_data.iloc[:, 0].to_numpy()
 
-    # Identify the Feature Sets
-    ge_columns = [col for col in x_train.columns if col.startswith('ge')]
-    md_columns = [col for col in x_train.columns if col.startswith('mordred')]
     # Slice the input tensor
-    all_input = Input(shape=(len(ge_columns) + len(md_columns),), name="all_input")
-    canc_input = Lambda(lambda x: x[:, :len(ge_columns)])(all_input)
-    drug_input = Lambda(lambda x: x[:, len(ge_columns):len(ge_columns) + len(md_columns)])(all_input)
+    all_input = Input(shape=(num_ge_columns + num_md_columns,), name="all_input")
+    canc_input = Lambda(lambda x: x[:, :num_ge_columns])(all_input)
+    drug_input = Lambda(lambda x: x[:, num_ge_columns:num_ge_columns + num_md_columns])(all_input)
+
+    # Create batch generators to help with memory issues on large datasets
+    train_data = train_gen(x_train, y_train, batch_size)
+    val_data_generator = val_gen(x_val, y_val, val_batch_size)
+    steps_per_epoch = len(x_train) // batch_size   # number of batches in training
+    validation_steps = len(x_val) // val_batch_size   # number of batches in val
 
     # Cancer expression input and encoding layers
     canc_encoded = canc_input
@@ -821,10 +879,8 @@ def run(params: Dict):
         loss="mean_squared_error",
     )
 
-    # Instantiate the R2 callback with training and validation data
-    train_data_for_callback = (x_train, y_train)
-    val_data_for_callback = (x_val, y_val)
-    r2_callback = R2Callback(train_data_for_callback, val_data_for_callback)
+    # Instantiate the R2 callback
+    r2_callback = R2Callback(train_data, val_data_generator, steps_per_epoch, validation_steps)
 
     # Learning rate scheduler callback
     lr_scheduler = LearningRateScheduler(
@@ -855,9 +911,10 @@ def run(params: Dict):
     # Training the model
     history = model.fit(
         train_data,
-        validation_data=(x_val, y_val),
+        validation_data=val_data_generator,
+        steps_per_epoch=steps_per_epoch,
+        validation_steps=validation_steps,
         epochs=epochs,
-        batch_size=batch_size,
         callbacks=[r2_callback, lr_scheduler, reduce_lr, early_stopping],
     )
 
@@ -867,6 +924,7 @@ def run(params: Dict):
     global time_per_epoch 
     time_per_epoch = (epoch_end_time - epoch_start_time) / total_epochs
 
+    # Save model
     model.save(modelpath)
 
     # Compute predictions and flatten to be accepted by store_predictions
