@@ -16,10 +16,13 @@ import textwrap
 
 from sklearn.preprocessing import (
     StandardScaler,
-    MaxAbsScaler,
     MinMaxScaler,
     RobustScaler,
+    MaxAbsScaler,
+    Normalizer,
+    PowerTransformer,
 )
+
 
 filepath = Path(__file__).resolve().parent  # [Req]
 
@@ -247,6 +250,10 @@ def scale_df(
             scaler = MaxAbsScaler()
         elif scaler_name == "robust":
             scaler = RobustScaler()
+        elif scaler_name in ["l1", "l2", "max"]:
+            scaler = Normalizer(norm=scaler_name)
+        elif scaler_name == "power_yj":
+            scaler = PowerTransformer(method='yeo-johnson')
         else:
             print(
                 f"The specified scaler ({scaler_name}) is not implemented (no df scaling)."

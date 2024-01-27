@@ -116,6 +116,7 @@ warmup_epochs = 5
 warmup_type = "quadratic"
 reduce_lr_patience = 3
 reduce_lr_factor = 0.5
+optimizer = "Adam"
 loss = "mse"
 early_stop_metric = "mse"
 early_stopping_patience = 15

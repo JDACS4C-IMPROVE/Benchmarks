@@ -705,6 +705,27 @@ class R2Callback(Callback):
         y_pred, y_true = batch_predict(self.model, data_generator, steps, flatten=True)
         r2 = r2_score(y_true, y_pred)
         return r2
+    
+
+def get_optimizer(optimizer_name, initial_lr):
+    if optimizer_name == "Adam":
+        return tf.keras.optimizers.Adam(learning_rate=initial_lr)
+    elif optimizer_name == "SGD":
+        return tf.keras.optimizers.SGD(learning_rate=initial_lr)
+    elif optimizer_name == "RMSprop":
+        return tf.keras.optimizers.RMSprop(learning_rate=initial_lr)
+    elif optimizer_name == "Adagrad":
+        return tf.keras.optimizers.Adagrad(learning_rate=initial_lr)
+    elif optimizer_name == "Adadelta":
+        return tf.keras.optimizers.Adadelta(learning_rate=initial_lr)
+    elif optimizer_name == "Adamax":
+        return tf.keras.optimizers.Adamax(learning_rate=initial_lr)
+    elif optimizer_name == "Nadam":
+        return tf.keras.optimizers.Nadam(learning_rate=initial_lr)
+    elif optimizer_name == "Ftrl":
+        return tf.keras.optimizers.Ftrl(learning_rate=initial_lr)
+    else:
+        raise ValueError(f"Optimizer '{optimizer_name}' is not recognized")
 
 
 def run(params: Dict):
@@ -747,6 +768,7 @@ def run(params: Dict):
     reduce_lr_factor = params["reduce_lr_factor"]
     reduce_lr_patience = params["reduce_lr_patience"]
     early_stopping_patience = params["early_stopping_patience"]
+    optimizer = get_optimizer(params["optimizer"], initial_lr)
 
     # Architecture Hyperparams
     # Cancer
@@ -893,7 +915,7 @@ def run(params: Dict):
     # Compile Model
     model = Model(inputs=all_input, outputs=output)
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=initial_lr),
+        optimizer=optimizer,
         loss="mean_squared_error",
     )
 
