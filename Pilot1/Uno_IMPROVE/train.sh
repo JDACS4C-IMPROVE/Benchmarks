@@ -65,10 +65,12 @@ fi
 echo "using CUDA_VISIBLE_DEVICES ${CUDA_VISIBLE_DEVICES}"
 echo "using IMPROVE_DATA_DIR ${IMPROVE_DATA_DIR}"
 echo "using CANDLE_CONFIG ${CANDLE_CONFIG}"
-echo "running command ${CMD}"
+
 
 # Set up environmental variables and execute model
 CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES} IMPROVE_DATA_DIR=${IMPROVE_DATA_DIR}
+echo "running command ${CMD_PRE}"
 $CMD_PRE
 echo "CHECKPOINT 1 Finished Preprocessing ---------------------------------------------"
+echo "running command ${CMD}"
 $CMD
