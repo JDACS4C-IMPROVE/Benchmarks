@@ -33,6 +33,7 @@ from tensorflow.keras.callbacks import (
 
 print("Tensorflow Version:")
 print(tf.__version__)
+print(tf.config.list_physical_devices('GPU'))
 
 filepath = Path(__file__).resolve().parent  # [Req]
 
