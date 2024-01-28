@@ -64,4 +64,7 @@ echo "using CANDLE_CONFIG ${CANDLE_CONFIG}"
 echo "running command ${CMD}"
 
 # Set up environmental variables and execute model
-CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES} IMPROVE_DATA_DIR=${IMPROVE_DATA_DIR} $CMD
+CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES} IMPROVE_DATA_DIR=${IMPROVE_DATA_DIR}
+python uno_preprocess_improve.py
+echo "CHECKPOINT 1 Finished Preprocessing ---------------------------------------------"
+$CMD
