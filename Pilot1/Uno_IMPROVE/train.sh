@@ -18,6 +18,7 @@ CANDLE_MODEL=uno_train_improve.py
 IMPROVE_MODEL_DIR=${IMPROVE_MODEL_DIR:-$( dirname -- "$0" )}
 
 # Combine path and name and check if executable exists
+CANDLE_MODEL=${IMPROVE_MODEL_DIR}/${CANDLE_MODEL_PRE}
 CANDLE_MODEL=${IMPROVE_MODEL_DIR}/${CANDLE_MODEL}
 if [ ! -f ${CANDLE_MODEL} ] ; then
 	echo No such file ${CANDLE_MODEL}
