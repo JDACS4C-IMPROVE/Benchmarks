@@ -11,6 +11,7 @@
 - conda config --add channels conda-forge
 - conda install tensorflow-gpu=2.10.0
 - pip install git+https://github.com/ECP-CANDLE/candle_lib@develop
+- pip install protobuf==3.20.0
 - git clone https://github.com/JDACS4C-IMPROVE/IMPROVE.git
 - export PYTHONPATH=<IMPROVE_LIBRARY_PATH>/:$PYTHONPATH
 - pip install pyarrow==12.0.1

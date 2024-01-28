@@ -41,6 +41,8 @@ From: tensorflow/tensorflow:2.10.0-gpu
     cd candle_lib
     git checkout develop
     python -m pip install .
+    # need to change candle's protobuf to have tensorflow compatibility
+    python -m pip install protobuf==3.20.0
     cd -
     git clone https://github.com/ECP-CANDLE/Benchmarks.git
     cd Benchmarks
