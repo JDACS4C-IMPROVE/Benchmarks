@@ -27,6 +27,7 @@ From: tensorflow/tensorflow:2.10.0-gpu
     # wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb
     # dpkg -i cuda-keyring_1.0-1_all.deb
     apt-get update
+    apt-get install -y vim
     apt-get install -y git ed
     # apt-get install -y python3.7
     python -m pip install scikit-learn==1.0.2 pyarrow==12.0.1 joblib==1.3.2
@@ -47,7 +48,7 @@ From: tensorflow/tensorflow:2.10.0-gpu
     git clone https://github.com/ECP-CANDLE/Benchmarks.git
     cd Benchmarks
     git checkout improve
-    cp /usr/local/Benchmarks/Pilot1/Uno/train.sh /usr/local/bin
+    cp /usr/local/Benchmarks/Pilot1/Uno_IMPROVE/* /usr/local/bin
 
 
 # Local Variables:
