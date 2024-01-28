@@ -527,6 +527,54 @@ model_train_params = [
         "help": "Activation for first interaction layer.",
     },
     {
+        "name": "interaction_layer_2_activation",
+        "type": str,
+        "default": "relu",
+        "help": "Activation for second interaction layer.",
+    },
+    {
+        "name": "interaction_layer_3_activation",
+        "type": str,
+        "default": "relu",
+        "help": "Activation for third interaction layer.",
+    },
+    {
+        "name": "interaction_layer_4_activation",
+        "type": str,
+        "default": "relu",
+        "help": "Activation for fourth interaction layer.",
+    },
+    {
+        "name": "interaction_layer_5_activation",
+        "type": str,
+        "default": "relu",
+        "help": "Activation for fifth interaction layer.",
+    },
+    {
+        "name": "interaction_layer_6_activation",
+        "type": str,
+        "default": "relu",
+        "help": "Activation for sixth interaction layer.",
+    },
+    {
+        "name": "interaction_layer_7_activation",
+        "type": str,
+        "default": "relu",
+        "help": "Activation for seventh interaction layer.",
+    },
+    {
+        "name": "interaction_layer_8_activation",
+        "type": str,
+        "default": "relu",
+        "help": "Activation for eighth interaction layer.",
+    },
+    {
+        "name": "interaction_layer_9_activation",
+        "type": str,
+        "default": "relu",
+        "help": "Activation for ninth interaction layer.",
+    },
+    {
         "name": "epochs",
         "type": int,
         "default": 150,
@@ -541,7 +589,7 @@ model_train_params = [
     {
         "name": "val_batch",
         "type": int,
-        "default": 256,
+        "default": 1024,
         "help": "Validation batch size.",
     },
     {
@@ -578,6 +626,12 @@ model_train_params = [
         "help": "Patience epochs for reducing learning rate.",
     },
     {
+        "name": "optimizer",
+        "type": str,
+        "default": "Adam",
+        "help": "Optimizer for gradient descent.",
+    },
+    {
         "name": "reduce_lr_factor",
         "type": float,
         "default": 0.5,
@@ -600,6 +654,12 @@ model_train_params = [
         "type": int,
         "default": 15,
         "help": "Patience for early stopping training after no improvement",
+    },
+    {
+        "name": "test_batch",
+        "type": int,
+        "default": 1024,
+        "help": "Test batch size.",
     },
 ]
 
@@ -915,11 +975,24 @@ def run(params: Dict):
     val_pred, val_true = batch_predict(model, val_data_generator, validation_steps)
     test_pred, test_true = batch_predict(model, test_data_generator, test_steps)
 
-    # Print the shapes to verify they match
+    # Check the data passed to find any possible error
+    print("Validation predictions data type:", val_pred.dtype)
+    print("Validation true values data type:", val_true.dtype)
+    print("NaNs in Validation predictions:", np.isnan(val_pred).any())
+    print("NaNs in Validation true values:", np.isnan(val_true).any())
     print("Validation predictions shape:", val_pred.shape)
     print("Validation true values shape:", val_true.shape)
-    print("Test predictions shape:", test_pred.shape)
-    print("Test true values shape:", test_true.shape)
+    assert val_pred.shape == val_true.shape, "Shape mismatch between validation predictions and true values"
+    assert len(val_pred) == len(val_true), "Length mismatch between validation predictions and true values"
+    print("Sample validation predictions:", val_pred[:5])
+    print("Sample validation true values:", val_true[:5])
+
+    # Compare the arrays and find indices where values differ
+    indices_of_differences = np.where(val_pred != val_true)[0]
+
+    # Iterate over the indices of differences and print the values
+    for idx in indices_of_differences:
+        print(f"Index: {idx}, Prediction: {val_pred[idx]}, True Value: {val_true[idx]}")
 
 
     # ------------------------------------------------------
