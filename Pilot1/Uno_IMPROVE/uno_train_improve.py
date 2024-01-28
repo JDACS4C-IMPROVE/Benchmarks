@@ -7,7 +7,7 @@ from typing import Dict
 
 from improve import framework as frm
 from improve.metrics import compute_metrics
-from uno_utils_improve import print_duration
+from uno_utils_improve import data_generator, batch_predict, print_duration
 import candle
 
 import numpy as np
@@ -612,67 +612,6 @@ train_params = app_train_params + model_train_params
 metrics_list = ["mse", "rmse", "pcc", "scc", "r2"]
 
 
-def train_gen(x_train, y_train, batch_size):
-    """
-    A generator function for creating batches of training data.
-
-    :param x_train: NumPy array of training features.
-    :param y_train: NumPy array of training labels.
-    :param batch_size: Size of the batches to be generated.
-    :return: Yields a tuple (batch_x, batch_y) in each iteration.
-    """
-    num_samples = len(x_train)
-    while True:  # Loop indefinitely
-        for offset in range(0, num_samples, batch_size):
-            # Calculate end of the current batch
-            end = offset + batch_size
-            # Generate batches
-            batch_x = x_train[offset:end]
-            batch_y = y_train[offset:end]
-            # Yield the current batch
-            yield (batch_x, batch_y)
-
-
-def val_gen(x_val, y_val, val_batch):
-    num_samples = len(x_val)
-    while True:  # Loop indefinitely
-        for offset in range(0, num_samples, val_batch):
-            # Calculate end of the current batch
-            end = offset + val_batch
-            # Generate batches
-            batch_x = x_val[offset:end]
-            batch_y = y_val[offset:end]
-            # Yield the current batch
-            yield (batch_x, batch_y)
-
-
-def test_gen(x_test, y_test, test_batch):
-    num_samples = len(x_test)
-    while True:  # Loop indefinitely
-        for offset in range(0, num_samples, test_batch):
-            # Calculate end of the current batch
-            end = offset + test_batch
-            # Generate batches
-            batch_x = x_test[offset:offset + test_batch]
-            batch_y = y_test[offset:offset + test_batch]
-            # Yield the current batch
-            yield (batch_x, batch_y)
-
-
-def batch_predict(model, data_generator, steps, flatten=True):
-    predictions = []
-    true_values = []
-    for _ in range(steps):
-        x, y = next(data_generator)
-        pred = model.predict(x, verbose=0)
-        if flatten:
-            pred = pred.flatten()
-            y = y.flatten()
-        predictions.extend(pred)
-        true_values.extend(y)
-    return np.array(predictions), np.array(true_values)
-
-
 def warmup_scheduler(epoch, lr, warmup_epochs, initial_lr, max_lr, warmup_type):
     if epoch <= warmup_epochs:
         if warmup_type == "linear":
@@ -878,9 +817,9 @@ def run(params: Dict):
     drug_input = Lambda(lambda x: x[:, num_ge_columns:num_ge_columns + num_md_columns])(all_input)
 
     # Create batch generators to help with memory issues on large datasets
-    train_data = train_gen(x_train, y_train, batch_size)
-    val_data_generator = val_gen(x_val, y_val, val_batch)
-    test_data_generator = test_gen(x_test, y_test, test_batch)
+    train_data = data_generator(x_train, y_train, batch_size)
+    val_data_generator = data_generator(x_val, y_val, val_batch)
+    test_data_generator = data_generator(x_test, y_test, test_batch)
     # Number of batches in training/val/test
     steps_per_epoch = int(np.ceil(len(x_train) // batch_size))
     validation_steps = int(np.ceil(len(x_val) / val_batch))

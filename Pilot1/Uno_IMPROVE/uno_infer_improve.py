@@ -18,15 +18,7 @@ from sklearn.metrics import r2_score
 # [Req] Imports from other scripts
 from uno_preprocess_improve import preprocess_params
 from uno_train_improve import metrics_list, train_params
-from uno_utils_improve import print_duration
-
-# Should we have preprocessing or assumed done before?
-# from sklearn.preprocessing import (
-#     StandardScaler,
-#     MaxAbsScaler,
-#     MinMaxScaler,
-#     RobustScaler,
-# )
+from uno_utils_improve import data_generator, batch_predict, print_duration
 
 filepath = Path(__file__).resolve().parent  # [Req]
 
@@ -87,8 +79,15 @@ def run(params: Dict):
     # ------------------------------------------------------
     ts_df = pd.read_parquet(Path(params["test_ml_data_dir"]) / test_data_fname)
 
-    y_ts = ts_df[[params["y_col_name"]]]
-    ts_df.drop([params["y_col_name"]], axis=1, inplace=True)
+    # Get real and predicted y_test and convert to numpy for compatibility
+    y_ts = ts_df[params["y_col_name"]].to_numpy()
+    x_ts = ts_df.drop([params["y_col_name"]], axis=1).to_numpy()
+
+    # Test data generator
+    test_batch_size = params.get("test_batch_size", params["test_batch"])  # You might want to define this in your params
+    test_data_generator = data_generator(x_ts, y_ts, test_batch_size)
+    test_steps = int(np.ceil(len(x_ts) / test_batch_size))
+
 
     # ------------------------------------------------------
     # Load best model and compute predictions
@@ -99,9 +98,9 @@ def run(params: Dict):
     # Load UNO
     model = load_model(modelpath)
 
-    # Predict and flatten to be accepted by store_predictions
-    test_pred = model.predict(ts_df).flatten()
-    test_true = y_ts.values.flatten()
+    # Use batch_predict for predictions
+    test_pred, test_true = batch_predict(model, test_data_generator, test_steps)
+
 
     # ------------------------------------------------------
     # [Req] Save raw predictions in dataframe
