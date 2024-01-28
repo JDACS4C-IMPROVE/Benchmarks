@@ -984,15 +984,6 @@ def run(params: Dict):
     print("Validation true values shape:", val_true.shape)
     assert val_pred.shape == val_true.shape, "Shape mismatch between validation predictions and true values"
     assert len(val_pred) == len(val_true), "Length mismatch between validation predictions and true values"
-    print("Sample validation predictions:", val_pred[:5])
-    print("Sample validation true values:", val_true[:5])
-
-    # Compare the arrays and find indices where values differ
-    indices_of_differences = np.where(val_pred != val_true)[0]
-
-    # Iterate over the indices of differences and print the values
-    for idx in indices_of_differences:
-        print(f"Index: {idx}, Prediction: {val_pred[idx]}, True Value: {val_true[idx]}")
 
 
     # ------------------------------------------------------

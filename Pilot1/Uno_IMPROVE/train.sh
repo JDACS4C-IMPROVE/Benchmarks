@@ -11,6 +11,7 @@
 ### Path and Name to your CANDLEized model's main Python script###
 
 # e.g. CANDLE_MODEL=graphdrp_baseline_pytorch.py
+CANDLE_MODEL_PRE=uno_preprocess_improve.py
 CANDLE_MODEL=uno_train_improve.py
 
 # Set env if CANDLE_MODEL is not in same directory as this script
@@ -34,6 +35,7 @@ fi
 if [ $# -eq 2 ] ; then
         CUDA_VISIBLE_DEVICES=$1 ; shift
         IMPROVE_DATA_DIR=$1 ; shift
+        CMD_PRE="python ${CANDLE_MODEL_PRE}"
         CMD="python ${CANDLE_MODEL}"
         echo "CMD = $CMD"
 
@@ -45,12 +47,14 @@ elif [ $# -ge 3 ] ; then
         if [ -f $IMPROVE_DATA_DIR/$1 ] ; then
 		echo "$1 is a file"
                 CANDLE_CONFIG=$1 ; shift
+                CMD_PRE="python ${CANDLE_MODEL_PRE} --config_file $CANDLE_CONFIG $@"
                 CMD="python ${CANDLE_MODEL} --config_file $CANDLE_CONFIG $@"
                 echo "CMD = $CMD $@"
 
         # else passthrough $@
         else
 		echo "$1 is not a file"
+                CMD_PRE="python ${CANDLE_MODEL_PRE} $@"
                 CMD="python ${CANDLE_MODEL} $@"
                 echo "CMD = $CMD"
 
@@ -65,6 +69,6 @@ echo "running command ${CMD}"
 
 # Set up environmental variables and execute model
 CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES} IMPROVE_DATA_DIR=${IMPROVE_DATA_DIR}
-python uno_preprocess_improve.py
+$CMD_PRE
 echo "CHECKPOINT 1 Finished Preprocessing ---------------------------------------------"
 $CMD
