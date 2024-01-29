@@ -877,15 +877,6 @@ def run(params: Dict):
     canc_input = Lambda(lambda x: x[:, :num_ge_columns])(all_input)
     drug_input = Lambda(lambda x: x[:, num_ge_columns:num_ge_columns + num_md_columns])(all_input)
 
-    # Create batch generators to help with memory issues on large datasets
-    train_data = data_generator(x_train, y_train, batch_size)
-    val_data_generator = data_generator(x_val, y_val, val_batch)
-    test_data_generator = data_generator(x_test, y_test, test_batch)
-    # Number of batches in training/val/test
-    steps_per_epoch = int(np.ceil(len(x_train) // batch_size))
-    validation_steps = int(np.ceil(len(x_val) / val_batch))
-    test_steps = int(np.ceil(len(x_test) / test_batch))
-
     # Cancer expression input and encoding layers
     canc_encoded = canc_input
     for i in range(canc_num_layers):
@@ -919,7 +910,13 @@ def run(params: Dict):
         loss="mean_squared_error",
     )
 
-    
+
+    # Number of batches for data loading and callbacks
+    steps_per_epoch = int(np.ceil(len(x_train) // batch_size))
+    validation_steps = int(np.ceil(len(x_val) / val_batch))
+    test_steps = int(np.ceil(len(x_test) / test_batch))
+
+
     # Instantiate callbacks
 
     # Learning rate scheduler
@@ -947,10 +944,19 @@ def run(params: Dict):
     )
 
     # R2
-    r2_callback = R2Callback(train_data, val_data_generator, steps_per_epoch, validation_steps)
+    r2_callback = R2Callback(
+        train_data_generator=data_generator(x_train, y_train, batch_size), 
+        val_data_generator=data_generator(x_val, y_val, val_batch), 
+        steps_per_epoch=steps_per_epoch, 
+        validation_steps=validation_steps
+    )
 
 
     epoch_start_time = time.time()
+
+    # Instantiate generators for model.fit
+    train_data = data_generator(x_train, y_train, batch_size)
+    val_data_generator = data_generator(x_val, y_val, val_batch)
 
     # Training the model
     history = model.fit(
@@ -972,18 +978,9 @@ def run(params: Dict):
     model.save(modelpath)
 
     # Batch prediction (and flatten inside function)
-    val_pred, val_true = batch_predict(model, val_data_generator, validation_steps)
-    test_pred, test_true = batch_predict(model, test_data_generator, test_steps)
-
-    # Check the data passed to find any possible error
-    print("Validation predictions data type:", val_pred.dtype)
-    print("Validation true values data type:", val_true.dtype)
-    print("NaNs in Validation predictions:", np.isnan(val_pred).any())
-    print("NaNs in Validation true values:", np.isnan(val_true).any())
-    print("Validation predictions shape:", val_pred.shape)
-    print("Validation true values shape:", val_true.shape)
-    assert val_pred.shape == val_true.shape, "Shape mismatch between validation predictions and true values"
-    assert len(val_pred) == len(val_true), "Length mismatch between validation predictions and true values"
+    # Make sure to make new generator state so no index problem
+    val_pred, val_true = batch_predict(model, data_generator(x_val, y_val, val_batch), validation_steps)
+    test_pred, test_true = batch_predict(model, data_generator(x_test, y_test, test_batch), test_steps)
 
 
     # ------------------------------------------------------

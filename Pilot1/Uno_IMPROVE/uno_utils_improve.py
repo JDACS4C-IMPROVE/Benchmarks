@@ -14,7 +14,7 @@ def data_generator(x_data, y_data, batch_size):
     while True:  # Loop indefinitely
         for offset in range(0, num_samples, batch_size):
             # Calculate end of the current batch
-            end = offset + batch_size
+            end = min(offset + batch_size, num_samples)
             # Generate batches
             batch_x = x_data[offset:end]
             batch_y = y_data[offset:end]
