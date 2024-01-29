@@ -675,7 +675,9 @@ metrics_list = ["mse", "rmse", "pcc", "scc", "r2"]
 
 def warmup_scheduler(epoch, lr, warmup_epochs, initial_lr, max_lr, warmup_type):
     if epoch <= warmup_epochs:
-        if warmup_type == "linear":
+        if warmup_type == "none" or warmup_type == "constant":
+            lr = max_lr
+        elif warmup_type == "linear":
             lr = initial_lr + (max_lr - initial_lr) * epoch / warmup_epochs
         elif warmup_type == "quadratic":
             lr = initial_lr + (max_lr - initial_lr) * ((epoch / warmup_epochs) ** 2)
