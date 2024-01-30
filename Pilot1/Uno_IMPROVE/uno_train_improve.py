@@ -688,7 +688,7 @@ def warmup_scheduler(epoch, lr, warmup_epochs, initial_lr, max_lr, warmup_type):
 
 def data_generator_factory(x_data, y_data, generator_batch_size):
     def generator_factory():
-        return data_generator(x_data, y_data, generator_batch_size, verbose=True)
+        return data_generator(x_data, y_data, generator_batch_size)
     return generator_factory
 
 

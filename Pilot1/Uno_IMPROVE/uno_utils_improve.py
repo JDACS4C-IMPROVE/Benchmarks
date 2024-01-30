@@ -1,13 +1,14 @@
 import numpy as np
 
 
-def data_generator(x_data, y_data, batch_size):
+def data_generator(x_data, y_data, batch_size, verbose=False):
     """
     A generalized generator function for creating batches of data.
 
     :param x_data: NumPy array of features.
     :param y_data: NumPy array of labels.
     :param batch_size: Size of the batches to be generated.
+    :param verbose: If True, prints the indices of the batches.
     :return: Yields a tuple (batch_x, batch_y) in each iteration.
     """
     num_samples = len(x_data)
@@ -15,11 +16,18 @@ def data_generator(x_data, y_data, batch_size):
         for offset in range(0, num_samples, batch_size):
             # Calculate end of the current batch
             end = min(offset + batch_size, num_samples)
+            
+            # Print batch indices if verbose
+            if verbose:
+                print(f"Generating batch from index {offset} to {end}")
+
             # Generate batches
             batch_x = x_data[offset:end]
             batch_y = y_data[offset:end]
+
             # Yield the current batch
             yield (batch_x, batch_y)
+
 
 
 def batch_predict(model, data_generator, steps, flatten=True):
