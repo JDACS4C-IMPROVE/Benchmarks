@@ -91,10 +91,10 @@ model_preproc_params = [
         "help": "Flag to indicate if using landmark genes.",
     },
     {
-        "name": "gene_scaling",
+        "name": "ge_scaling",
         "type": str,
         "default": "std",
-        "choice": ["std", "minmax", "miabs", "robust"],
+        "choice": ["std", "minmax", "miabs", "robust", "l1", "l2", "max", "power_yj"],
         "help": "Scaler for gene expression data.",
     },
     {
@@ -104,10 +104,10 @@ model_preproc_params = [
         "help": "File name to save the gene expression scaler object.",
     },
     {
-        "name": "drug_scaling",
+        "name": "md_scaling",
         "type": str,
         "default": "std",
-        "choice": ["std", "minmax", "miabs", "robust"],
+        "choice": ["std", "minmax", "miabs", "robust", "l1", "l2", "max", "power_yj"],
         "help": "Scaler for gene expression data.",
     },
     {
@@ -119,8 +119,14 @@ model_preproc_params = [
     {
         "name": "preprocess_debug",
         "type": bool,
-        "default": True,
+        "default": False,
         "help": "Debug mode to show data",
+    },
+    {
+        "name": "preprocess_subset_data",
+        "type": bool,
+        "default": False,
+        "help": "Subsetting data for faster test runs",
     },
 ]
 
@@ -527,6 +533,7 @@ def main(args):
         # required=req_preprocess_params,
         required=None,
     )
+    print("MADE ITT!!!")
     ml_data_outdir = run(params)
     print(
         "\nFinished UNO pre-processing (transformed raw DRP data to model input ML data)."

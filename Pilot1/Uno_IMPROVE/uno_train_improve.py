@@ -587,15 +587,15 @@ model_train_params = [
         "help": "Batch size for training.",
     },
     {
-        "name": "val_batch",
+        "name": "generator_batch_size",
         "type": int,
         "default": 1024,
-        "help": "Validation batch size.",
+        "help": "Batch size when doing generation/prediction.",
     },
     {
         "name": "raw_max_lr",
         "type": float,
-        "default": 1e-6,
+        "default": 1e-8,
         "help": "Raw maximum learning rate that is scaled according to batch size.",
     },
     {
@@ -626,16 +626,16 @@ model_train_params = [
         "help": "Patience epochs for reducing learning rate.",
     },
     {
-        "name": "optimizer",
-        "type": str,
-        "default": "Adam",
-        "help": "Optimizer for gradient descent.",
-    },
-    {
         "name": "reduce_lr_factor",
         "type": float,
         "default": 0.5,
         "help": "Factor for reducing learning rate after plateau.",
+    },
+    {
+        "name": "optimizer",
+        "type": str,
+        "default": "Adam",
+        "help": "Optimizer for gradient descent.",
     },
     {
         "name": "loss",
@@ -652,15 +652,9 @@ model_train_params = [
     {
         "name": "early_stopping_patience",
         "type": int,
-        "default": 15,
+        "default": 12,
         "help": "Patience for early stopping training after no improvement",
-    },
-    {
-        "name": "test_batch",
-        "type": int,
-        "default": 1024,
-        "help": "Test batch size.",
-    },
+    }
 ]
 
 
@@ -688,17 +682,26 @@ def warmup_scheduler(epoch, lr, warmup_epochs, initial_lr, max_lr, warmup_type):
     return float(lr)  # Ensure returning a float value
 
 
+def data_generator_factory(x_data, y_data, generator_batch_size):
+    def generator_factory():
+        return data_generator(x_data, y_data, generator_batch_size, verbose=True)
+    return generator_factory
+
+
 class R2Callback(Callback):
-    def __init__(self, train_data_generator, val_data_generator, steps_per_epoch, validation_steps):
+    def __init__(self, train_generator_factory, val_generator_factory, train_steps, validation_steps):
         super().__init__()
-        self.train_data_generator = train_data_generator
-        self.val_data_generator = val_data_generator
-        self.steps_per_epoch = steps_per_epoch
+        self.train_generator_factory = train_generator_factory
+        self.val_generator_factory = val_generator_factory
+        self.train_steps = train_steps
         self.validation_steps = validation_steps
 
     def on_epoch_end(self, epoch, logs=None):
-        r2_train = self.compute_r2(self.train_data_generator, self.steps_per_epoch)
-        r2_val = self.compute_r2(self.val_data_generator, self.validation_steps)
+        train_data_generator = self.train_generator_factory()
+        val_data_generator = self.val_generator_factory()
+
+        r2_train = self.compute_r2(train_data_generator, self.train_steps)
+        r2_val = self.compute_r2(val_data_generator, self.validation_steps)
         
         logs["r2_train"] = r2_train
         logs["r2_val"] = r2_val
@@ -707,7 +710,7 @@ class R2Callback(Callback):
         y_pred, y_true = batch_predict(self.model, data_generator, steps, flatten=True)
         r2 = r2_score(y_true, y_pred)
         return r2
-    
+
 
 def get_optimizer(optimizer_name, initial_lr):
     if optimizer_name == "Adam":
@@ -758,8 +761,7 @@ def run(params: Dict):
     # Learning Hyperparams
     epochs = params["epochs"]
     batch_size = params["batch_size"]
-    val_batch = params["val_batch"]
-    test_batch = params["test_batch"]
+    generator_batch_size = params["generator_batch_size"]
     raw_max_lr = params["raw_max_lr"]
     raw_min_lr = raw_max_lr / (10 ** params["lr_log_10_range"])
     max_lr = raw_max_lr * batch_size
@@ -914,9 +916,10 @@ def run(params: Dict):
 
 
     # Number of batches for data loading and callbacks
-    steps_per_epoch = int(np.ceil(len(x_train) // batch_size))
-    validation_steps = int(np.ceil(len(x_val) / val_batch))
-    test_steps = int(np.ceil(len(x_test) / test_batch))
+    steps_per_epoch = int(np.ceil(len(x_train) / batch_size))
+    train_steps = int(np.ceil(len(x_train) / generator_batch_size))
+    validation_steps = int(np.ceil(len(x_val) / generator_batch_size))
+    test_steps = int(np.ceil(len(x_test) / generator_batch_size))
 
 
     # Instantiate callbacks
@@ -946,10 +949,14 @@ def run(params: Dict):
     )
 
     # R2
+    # Need factory to recreate generator for each callback to deal with index issues
+    train_generator_factory = data_generator_factory(x_train, y_train, generator_batch_size)
+    val_generator_factory = data_generator_factory(x_val, y_val, generator_batch_size)
+    # Actual callback
     r2_callback = R2Callback(
-        train_data_generator=data_generator(x_train, y_train, batch_size), 
-        val_data_generator=data_generator(x_val, y_val, val_batch), 
-        steps_per_epoch=steps_per_epoch, 
+        train_generator_factory=train_generator_factory,
+        val_generator_factory=val_generator_factory,
+        train_steps=train_steps,
         validation_steps=validation_steps
     )
 
@@ -958,7 +965,7 @@ def run(params: Dict):
 
     # Instantiate generators for model.fit
     train_data = data_generator(x_train, y_train, batch_size)
-    val_data_generator = data_generator(x_val, y_val, val_batch)
+    val_data_generator = data_generator(x_val, y_val, generator_batch_size)
 
     # Training the model
     history = model.fit(
@@ -981,8 +988,8 @@ def run(params: Dict):
 
     # Batch prediction (and flatten inside function)
     # Make sure to make new generator state so no index problem
-    val_pred, val_true = batch_predict(model, data_generator(x_val, y_val, val_batch), validation_steps)
-    test_pred, test_true = batch_predict(model, data_generator(x_test, y_test, test_batch), test_steps)
+    val_pred, val_true = batch_predict(model, data_generator(x_val, y_val, generator_batch_size), validation_steps)
+    test_pred, test_true = batch_predict(model, data_generator(x_test, y_test, generator_batch_size), test_steps)
 
 
     # ------------------------------------------------------

@@ -84,7 +84,7 @@ def run(params: Dict):
     x_ts = ts_df.drop([params["y_col_name"]], axis=1).to_numpy()
 
     # Test data generator
-    test_batch_size = params.get("test_batch_size", params["test_batch"])  # You might want to define this in your params
+    test_batch_size = params.get("test_batch_size", params["test_batch"])
     test_data_generator = data_generator(x_ts, y_ts, test_batch_size)
     test_steps = int(np.ceil(len(x_ts) / test_batch_size))
 

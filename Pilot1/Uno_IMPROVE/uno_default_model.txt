@@ -3,10 +3,10 @@ model_name = "UNO"
 y_col_name = "auc"
 
 [Preprocess]
-train_split_file = "gCSI_split_0_train.txt"
-val_split_file = "gCSI_split_0_val.txt"
-test_split_file = "gCSI_split_0_test.txt"
-ml_data_outdir = "./ml_data/gCSI-gCSI/split_0"
+train_split_file = "CTRPv2_split_0_train.txt"
+val_split_file = "CTRPv2_split_0_val.txt"
+test_split_file = "CTRPv2_split_0_test.txt"
+ml_data_outdir = "./ml_data/CTRPv2-CTRPv2/split_0"
 data_format = ".parquet"
 y_data_files = [["response.tsv"]]
 x_data_canc_files = [["cancer_gene_expression.tsv",  ["Gene_Symbol"]]]
@@ -18,9 +18,9 @@ preprocess_debug = False
 preprocess_subset_data = False
 
 [Train]
-train_ml_data_dir = "./ml_data/gCSI-gCSI/split_0"
-val_ml_data_dir = "./ml_data/gCSI-gCSI/split_0"
-model_outdir = "./out_models/gCSI/split_0"
+train_ml_data_dir = "./ml_data/CTRPv2-CTRPv2/split_0"
+val_ml_data_dir = "./ml_data/CTRPv2-CTRPv2/split_0"
+model_outdir = "./out_models/CTRPv2/split_0"
 model_file_name = "uno_improve"
 model_file_format = ".py"
 canc_num_layers = 3
@@ -109,7 +109,7 @@ interaction_layer_8_activation = "relu"
 interaction_layer_9_activation = "relu"
 epochs = 150
 batch_size = 32
-val_batch = 1024
+generator_batch_size = 1024
 raw_max_lr = 3e-9
 lr_log_10_range = 3
 warmup_epochs = 5
@@ -128,7 +128,6 @@ train_debug = False
 train_subset_data = False
 
 [Infer]
-test_ml_data_dir = "./ml_data/gCSI-gCSI/split_0"
-model_dir = "./out_models/gCSI/split_0"
-infer_outdir = "./out_infer/gCSI-gCSI/split_0"
-test_batch = 1024
+test_ml_data_dir = "./ml_data/CTRPv2-CTRPv2/split_0"
+model_dir = "./out_models/CTRPv2/split_0"
+infer_outdir = "./out_infer/CTRPv2-CTRPv2/split_0"
