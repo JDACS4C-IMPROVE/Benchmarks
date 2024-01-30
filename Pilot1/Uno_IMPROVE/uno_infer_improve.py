@@ -7,13 +7,11 @@ from typing import Dict
 
 # [Req] IMPROVE/CANDLE imports
 from improve import framework as frm
-from improve.metrics import compute_metrics
 
 # Additional imports
 import numpy as np
 import pandas as pd
 from tensorflow.keras.models import load_model
-from sklearn.metrics import r2_score
 
 # [Req] Imports from other scripts
 from uno_preprocess_improve import preprocess_params
@@ -46,9 +44,6 @@ model_infer_params = []
 # frm.initialize_parameters() in the main().
 infer_params = app_infer_params + model_infer_params
 # ---------------------
-
-# [Req] List of metrics names to compute prediction performance scores
-metrics_list = ["mse", "rmse", "pcc", "scc", "r2"]
 
 
 # [Req]

@@ -5,10 +5,14 @@ import sys
 from pathlib import Path
 from typing import Dict
 
+# [Req] IMPROVE/CANDLE imports
 from improve import framework as frm
-from improve.metrics import compute_metrics
+
+# [Req] Imports from preprocess script
+from uno_preprocess_improve import preprocess_params
+
+# Import custom made functions
 from uno_utils_improve import data_generator, batch_predict, print_duration
-import candle
 
 import numpy as np
 import pandas as pd
@@ -688,28 +692,48 @@ def data_generator_factory(x_data, y_data, generator_batch_size):
     return generator_factory
 
 
+def calculate_sstot(y):
+    """
+    Calculate the total sum of squares (SStot) using a NumPy array.
+
+    :param y: NumPy array of observed values.
+    :return: Total sum of squares (SStot).
+    """
+    # Calculate the mean of the observed values
+    y_mean = np.mean(y)
+
+    # Calculate the total sum of squares
+    sstot = np.sum((y - y_mean) ** 2)
+
+    return sstot
+
+
 class R2Callback(Callback):
-    def __init__(self, train_generator_factory, val_generator_factory, train_steps, validation_steps):
+    def __init__(self, train_generator_factory, val_generator_factory, train_steps, validation_steps, sstot_train, sstot_val):
         super().__init__()
         self.train_generator_factory = train_generator_factory
         self.val_generator_factory = val_generator_factory
         self.train_steps = train_steps
         self.validation_steps = validation_steps
+        self.sstot_train = sstot_train
+        self.sstot_val = sstot_val
 
     def on_epoch_end(self, epoch, logs=None):
         train_data_generator = self.train_generator_factory()
         val_data_generator = self.val_generator_factory()
 
-        r2_train = self.compute_r2(train_data_generator, self.train_steps)
-        r2_val = self.compute_r2(val_data_generator, self.validation_steps)
+        r2_train = self.compute_r2(train_data_generator, self.train_steps, self.sstot_train)
+        r2_val = self.compute_r2(val_data_generator, self.validation_steps, self.sstot_val)
         
         logs["r2_train"] = r2_train
         logs["r2_val"] = r2_val
 
-    def compute_r2(self, data_generator, steps):
+    def compute_r2(self, data_generator, steps, sstot):
         y_pred, y_true = batch_predict(self.model, data_generator, steps, flatten=True)
-        r2 = r2_score(y_true, y_pred)
+        ssres = np.sum((y_true - y_pred) ** 2)
+        r2 = 1 - (ssres / sstot)
         return r2
+
 
 
 def get_optimizer(optimizer_name, initial_lr):
@@ -948,33 +972,44 @@ def run(params: Dict):
         restore_best_weights=True,
     )
 
-    # R2
-    # Need factory to recreate generator for each callback to deal with index issues
-    train_generator_factory = data_generator_factory(x_train, y_train, generator_batch_size)
+    # Make factories for the next two callbacks (dealing with index issues)
+    r2_train_generator_factory = data_generator_factory(x_train, y_train, generator_batch_size)
+    gd_train_generator_factory = data_generator_factory(x_train, y_train, batch_size)
     val_generator_factory = data_generator_factory(x_val, y_val, generator_batch_size)
+
+    # R2
+    sstot_train = calculate_sstot(y_train)
+    sstot_val = calculate_sstot(y_val)
     # Actual callback
     r2_callback = R2Callback(
-        train_generator_factory=train_generator_factory,
+        train_generator_factory=r2_train_generator_factory,
         val_generator_factory=val_generator_factory,
         train_steps=train_steps,
-        validation_steps=validation_steps
+        validation_steps=validation_steps,
+        sstot_train=sstot_train,
+        sstot_val=sstot_val
     )
+
+    # Refresh Generator
+    class RefreshGeneratorCallback(Callback):
+        def on_epoch_begin(self, epoch, logs=None):
+            self.model.fit_generator = gd_train_generator_factory()
+            self.model.validation_data = val_generator_factory()
+    # Actual callback
+    refresh_generator = RefreshGeneratorCallback()
 
 
     epoch_start_time = time.time()
 
-    # Instantiate generators for model.fit
-    train_data = data_generator(x_train, y_train, batch_size)
-    val_data_generator = data_generator(x_val, y_val, generator_batch_size)
 
     # Training the model
     history = model.fit(
-        train_data,
-        validation_data=val_data_generator,
+        gd_train_generator_factory(),
+        validation_data=val_generator_factory(),
         steps_per_epoch=steps_per_epoch,
         validation_steps=validation_steps,
         epochs=epochs,
-        callbacks=[r2_callback, lr_scheduler, reduce_lr, early_stopping],
+        callbacks=[r2_callback, lr_scheduler, reduce_lr, early_stopping, refresh_generator],
     )
 
     # Calculate the time per epoch
@@ -1031,7 +1066,7 @@ def run(params: Dict):
 # [Req]
 def main(args):
     # [Req]
-    additional_definitions = app_train_params + train_params
+    additional_definitions = preprocess_params + train_params
     params = frm.initialize_parameters(
         filepath,
         default_model="uno_default_model.txt",
