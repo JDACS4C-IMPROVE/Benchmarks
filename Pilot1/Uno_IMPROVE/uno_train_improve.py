@@ -656,6 +656,18 @@ model_train_params = [
         "default": 12,
         "help": "Patience for early stopping training after no improvement",
     }
+    {
+        "name": "train_debug",
+        "type": bool,
+        "default": False,
+        "help": "Debug mode to show training information",
+    },
+    {
+        "name": "train_subset_data",
+        "type": bool,
+        "default": False,
+        "help": "Subsetting data for faster test runs",
+    },
 ]
 
 
