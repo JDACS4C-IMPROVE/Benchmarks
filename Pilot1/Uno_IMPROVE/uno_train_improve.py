@@ -655,7 +655,7 @@ model_train_params = [
         "type": int,
         "default": 12,
         "help": "Patience for early stopping training after no improvement",
-    }
+    },
     {
         "name": "train_debug",
         "type": bool,
