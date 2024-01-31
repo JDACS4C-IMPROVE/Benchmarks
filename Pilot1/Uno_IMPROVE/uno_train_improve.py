@@ -44,7 +44,7 @@ filepath = Path(__file__).resolve().parent  # [Req]
 # Notes: 
 # Model.fit initalizes batch before epoch, causing that generator to be off a batch size.
 # Do not use same generator to make predictions... results in index shift that cause v1=v2 error
-# Highly differing training and evaluation batch sizes caused odd behavior where r2 would be bad despite loss decreasing
+# Highly differing training and evaluation batch sizes possibly causes odd behavior?
 
 # ---------------------
 # [Req] Parameter lists
@@ -781,7 +781,7 @@ def run(params: Dict):
     # Learning Hyperparams
     epochs = params["epochs"]
     batch_size = params["batch_size"]
-    generator_batch_size = batch_size
+    generator_batch_size = params["generator_batch_size"]
     raw_max_lr = params["raw_max_lr"]
     raw_min_lr = raw_max_lr / (10 ** params["lr_log_10_range"])
     max_lr = raw_max_lr * batch_size
