@@ -40,7 +40,7 @@ class Timer:
 
 fdir = Path(__file__).resolve().parent
 
-maindir = Path(f"./cross_study_auc")
+maindir = Path(f"./cross_study_default1")
 MAIN_ML_DATA_DIR = Path(f"./{maindir}/ml_data")
 MAIN_MODEL_DIR = Path(f"./{maindir}/models")
 MAIN_INFER_OUTDIR = Path(f"./{maindir}/infer")
@@ -69,11 +69,11 @@ print_fn(f"File path: {fdir}")
 
 ### Source and target data sources
 ## Set 1 - full analysis
-# source_datasets = ["CCLE", "CTRPv2", "gCSI", "GDSCv1", "GDSCv2"]
-# target_datasets = ["CCLE", "CTRPv2", "gCSI", "GDSCv1", "GDSCv2"]
+source_datasets = ["CCLE", "CTRPv2", "gCSI", "GDSCv1", "GDSCv2"]
+target_datasets = ["CCLE", "CTRPv2", "gCSI", "GDSCv1", "GDSCv2"]
 ## Set 2 - smaller datasets
-source_datasets = ["CCLE", "gCSI"]
-target_datasets = ["CCLE", "gCSI"]
+# source_datasets = ["CCLE", "gCSI"]
+# target_datasets = ["CCLE", "gCSI"]
 # source_datasets = ["CCLE", "gCSI", "GDSCv1", "GDSCv2"]
 # target_datasets = ["CCLE", "gCSI", "GDSCv1", "GDSCv2"]
 # source_datasets = ["CCLE", "GDSCv1"]

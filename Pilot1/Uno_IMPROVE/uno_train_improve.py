@@ -795,6 +795,7 @@ def run(params: Dict):
     optimizer = get_optimizer(params["optimizer"], initial_lr)
     train_debug = params["train_debug"]
     train_subset_data = params["train_subset_data"]
+    preprocess_subset_data = params["preprocess_subset_data"]
 
     # Architecture Hyperparams
     # Cancer
