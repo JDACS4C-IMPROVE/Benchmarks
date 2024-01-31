@@ -294,6 +294,13 @@ def run(params: Dict):
     frm.create_outdir(outdir=params["ml_data_outdir"])
     # ------------------------------------------------------
 
+    # ------------------------------------------------------
+    # Reading hyperparameters
+    # ------------------------------------------------------
+    preprocess_debug = params["preprocess_debug"]
+    preprocess_subset_data = params["preprocess_subset_data"]
+
+
     temp_start_time = time.time()
     # ------------------------------------------------------
     # [Req] Load omics data
@@ -329,7 +336,7 @@ def run(params: Dict):
     print_duration("Loading Data", temp_start_time, temp_end_time)
 
     # Check loaded data if debug mode on
-    if params["preprocess_debug"]:
+    if preprocess_debug:
         print("Loaded Gene Expression:")
         print(ge.head())
         print(ge.shape)
@@ -369,7 +376,7 @@ def run(params: Dict):
     )
 
     # Check shapes if debug mode on
-    if params["preprocess_debug"]:
+    if preprocess_debug:
         print(textwrap.dedent(f"""
             Gene Expression Shape Before Subsetting With Response: {ge.shape}
             Gene Expression Shape After Subsetting With Response: {ge_sub.shape}
@@ -436,7 +443,7 @@ def run(params: Dict):
         )
 
         # Check shapes if debug mode on
-        if params["preprocess_debug"]:
+        if preprocess_debug:
             print(textwrap.dedent(f"""
                 Gene Expression Shape Before Subsetting With Response: {ge.shape}
                 Gene Expression Shape After Subsetting With Response: {ge_sub.shape}
@@ -453,7 +460,7 @@ def run(params: Dict):
         md_sc, _ = scale_df(md_sub, scaler=md_scaler)  # scale Mordred descriptors
         temp_end_time = time.time()
         print_duration(f"Applying Scaler to {stage.capitalize()}", temp_start_time, temp_end_time)
-        if params["preprocess_debug"]:
+        if preprocess_debug:
             print("Gene Expression Scaled:")
             print(ge_sc.head())
             print(ge_sc.shape)
@@ -469,7 +476,7 @@ def run(params: Dict):
         # --------------------------------
             
         # Shuffle data / subset if setting true (for testing)
-        if params["preprocess_subset_data"]:
+        if preprocess_subset_data:
             # Define the total number of samples and the proportions for each stage
             total_num_samples = 5000
             stage_proportions = {"train": 0.8, "val": 0.1, "test": 0.1}   # should represent proportions given
@@ -495,7 +502,7 @@ def run(params: Dict):
 
 
         # Show dataframes if on debug mode
-        if params["preprocess_debug"]:
+        if preprocess_debug:
             print("Final merged Data:")
             print(merged_df.head())
             print("")
@@ -534,7 +541,6 @@ def main(args):
         # required=req_preprocess_params,
         required=None,
     )
-    print("MADE ITT!!!")
     ml_data_outdir = run(params)
     print(
         "\nFinished UNO pre-processing (transformed raw DRP data to model input ML data)."

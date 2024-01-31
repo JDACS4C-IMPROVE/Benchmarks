@@ -1,18 +1,11 @@
 import numpy as np
+import traceback
 
 
 def data_generator(x_data, y_data, batch_size, verbose=False):
-    """
-    A generalized generator function for creating batches of data.
-
-    :param x_data: NumPy array of features.
-    :param y_data: NumPy array of labels.
-    :param batch_size: Size of the batches to be generated.
-    :param verbose: If True, prints the indices of the batches.
-    :return: Yields a tuple (batch_x, batch_y) in each iteration.
-    """
     num_samples = len(x_data)
-    while True:  # Loop indefinitely
+    
+    while True:  # Loop indefinitely for epochs
         for offset in range(0, num_samples, batch_size):
             # Calculate end of the current batch
             end = min(offset + batch_size, num_samples)
@@ -20,6 +13,7 @@ def data_generator(x_data, y_data, batch_size, verbose=False):
             # Print batch indices if verbose
             if verbose:
                 print(f"Generating batch from index {offset} to {end}")
+                # traceback.print_stack()
 
             # Generate batches
             batch_x = x_data[offset:end]
@@ -29,11 +23,11 @@ def data_generator(x_data, y_data, batch_size, verbose=False):
             yield (batch_x, batch_y)
 
 
-
-def batch_predict(model, data_generator, steps, flatten=True):
+def batch_predict(model, data_generator, steps, flatten=True, verbose=False):
     predictions = []
     true_values = []
     for _ in range(steps):
+        # print("Batch Predict get next")
         x, y = next(data_generator)
         pred = model.predict(x, verbose=0)
         if flatten:
@@ -41,6 +35,10 @@ def batch_predict(model, data_generator, steps, flatten=True):
             y = y.flatten()
         predictions.extend(pred)
         true_values.extend(y)
+        if verbose:
+            print("Batch Predict:")
+            print(f"Predictions: {len(predictions)}")
+            print(f"True: {len(true_values)}")
     return np.array(predictions), np.array(true_values)
 
 

@@ -41,7 +41,10 @@ print(tf.config.list_physical_devices('GPU'))
 
 filepath = Path(__file__).resolve().parent  # [Req]
 
-# Notes: Permanent Dropout?,
+# Notes: 
+# Model.fit initalizes batch before epoch, causing that generator to be off a batch size.
+# Do not use same generator to make predictions... results in index shift that cause v1=v2 error
+# Highly differing training and evaluation batch sizes caused odd behavior where r2 would be bad despite loss decreasing
 
 # ---------------------
 # [Req] Parameter lists
@@ -591,12 +594,6 @@ model_train_params = [
         "help": "Batch size for training.",
     },
     {
-        "name": "generator_batch_size",
-        "type": int,
-        "default": 1024,
-        "help": "Batch size when doing generation/prediction.",
-    },
-    {
         "name": "raw_max_lr",
         "type": float,
         "default": 1e-8,
@@ -686,12 +683,6 @@ def warmup_scheduler(epoch, lr, warmup_epochs, initial_lr, max_lr, warmup_type):
     return float(lr)  # Ensure returning a float value
 
 
-def data_generator_factory(x_data, y_data, generator_batch_size):
-    def generator_factory():
-        return data_generator(x_data, y_data, generator_batch_size)
-    return generator_factory
-
-
 def calculate_sstot(y):
     """
     Calculate the total sum of squares (SStot) using a NumPy array.
@@ -709,31 +700,36 @@ def calculate_sstot(y):
 
 
 class R2Callback(Callback):
-    def __init__(self, train_generator_factory, val_generator_factory, train_steps, validation_steps, sstot_train, sstot_val):
+    def __init__(self, model, r2_train_generator, r2_val_generator, train_steps, validation_steps, sstot_train, sstot_val, train_debug=False):
         super().__init__()
-        self.train_generator_factory = train_generator_factory
-        self.val_generator_factory = val_generator_factory
+        self.model = model
+        self.train_generator = r2_train_generator
+        self.val_generator = r2_val_generator
         self.train_steps = train_steps
         self.validation_steps = validation_steps
         self.sstot_train = sstot_train
         self.sstot_val = sstot_val
+        self.train_debug = train_debug
 
     def on_epoch_end(self, epoch, logs=None):
-        train_data_generator = self.train_generator_factory()
-        val_data_generator = self.val_generator_factory()
-
-        r2_train = self.compute_r2(train_data_generator, self.train_steps, self.sstot_train)
-        r2_val = self.compute_r2(val_data_generator, self.validation_steps, self.sstot_val)
-        
+        # print("R2 Start")
+        r2_train = self.compute_r2(self.train_generator, self.train_steps, self.sstot_train, self.train_debug)
+        r2_val = self.compute_r2(self.val_generator, self.validation_steps, self.sstot_val, self.train_debug)
         logs["r2_train"] = r2_train
         logs["r2_val"] = r2_val
+        # print("R2 End")
 
-    def compute_r2(self, data_generator, steps, sstot):
-        y_pred, y_true = batch_predict(self.model, data_generator, steps, flatten=True)
+    def compute_r2(self, data_generator, steps, sstot, train_debug):
+        y_pred, y_true = batch_predict(self.model, data_generator, steps)
         ssres = np.sum((y_true - y_pred) ** 2)
         r2 = 1 - (ssres / sstot)
+        if train_debug:
+            print("R2 Calculation:")
+            print(f"y_pred Size: {len(y_pred)}")
+            print(f"y_true Size: {len(y_true)}")
+            print(f"SSres Check: {ssres}")
+            print(f"SStot Check: {sstot}")
         return r2
-
 
 
 def get_optimizer(optimizer_name, initial_lr):
@@ -785,7 +781,7 @@ def run(params: Dict):
     # Learning Hyperparams
     epochs = params["epochs"]
     batch_size = params["batch_size"]
-    generator_batch_size = params["generator_batch_size"]
+    generator_batch_size = batch_size
     raw_max_lr = params["raw_max_lr"]
     raw_min_lr = raw_max_lr / (10 ** params["lr_log_10_range"])
     max_lr = raw_max_lr * batch_size
@@ -797,6 +793,8 @@ def run(params: Dict):
     reduce_lr_patience = params["reduce_lr_patience"]
     early_stopping_patience = params["early_stopping_patience"]
     optimizer = get_optimizer(params["optimizer"], initial_lr)
+    train_debug = params["train_debug"]
+    train_subset_data = params["train_subset_data"]
 
     # Architecture Hyperparams
     # Cancer
@@ -829,7 +827,7 @@ def run(params: Dict):
             params[f"interaction_layer_{i+1}_activation"]
         )
     # Print architecture in debug mode
-    if params["train_debug"]:
+    if train_debug:
         print("CANCER LAYERS:")
         print(canc_layers_size, canc_layers_dropout, canc_layers_activation)
         print("DRUG LAYERS:")
@@ -856,7 +854,7 @@ def run(params: Dict):
     ts_data = pd.read_parquet(Path(params["test_ml_data_dir"])/test_data_fname)
 
     # Subsetting the data for faster training if desired
-    if params["train_subset_data"]:
+    if train_subset_data:
         # Subset 5000 samples (or all for small datasets)
         total_num_samples = 5000
         dataset_proportions = {"train": 0.8, "validation": 0.1, "test": 0.1}
@@ -873,7 +871,7 @@ def run(params: Dict):
             ts_data = ts_data.sample(n=num_samples["test"]).reset_index(drop=True) 
 
     # Show data in debug mode
-    if params["train_debug"]:
+    if train_debug:
         print("TRAIN DATA:")
         print(tr_data.head())
         print(tr_data.shape)
@@ -940,6 +938,7 @@ def run(params: Dict):
 
 
     # Number of batches for data loading and callbacks
+    # steps_per_epoch is for grad descent batches while train_steps is for r2_train
     steps_per_epoch = int(np.ceil(len(x_train) / batch_size))
     train_steps = int(np.ceil(len(x_train) / generator_batch_size))
     validation_steps = int(np.ceil(len(x_val) / generator_batch_size))
@@ -972,45 +971,41 @@ def run(params: Dict):
         restore_best_weights=True,
     )
 
-    # Make factories for the next two callbacks (dealing with index issues)
-    r2_train_generator_factory = data_generator_factory(x_train, y_train, generator_batch_size)
-    gd_train_generator_factory = data_generator_factory(x_train, y_train, batch_size)
-    val_generator_factory = data_generator_factory(x_val, y_val, generator_batch_size)
-
     # R2
     sstot_train = calculate_sstot(y_train)
     sstot_val = calculate_sstot(y_val)
-    # Actual callback
+    # Create generators to calculate r2
+    r2_train_gen = data_generator(x_train, y_train, generator_batch_size)
+    r2_val_gen = data_generator(x_val, y_val, generator_batch_size)
+    # Initialize R2Callback with generators
     r2_callback = R2Callback(
-        train_generator_factory=r2_train_generator_factory,
-        val_generator_factory=val_generator_factory,
+        model=model,
+        r2_train_generator=r2_train_gen,
+        r2_val_generator=r2_val_gen,
         train_steps=train_steps,
         validation_steps=validation_steps,
         sstot_train=sstot_train,
         sstot_val=sstot_val
     )
 
-    # Refresh Generator
-    class RefreshGeneratorCallback(Callback):
-        def on_epoch_begin(self, epoch, logs=None):
-            self.model.fit_generator = gd_train_generator_factory()
-            self.model.validation_data = val_generator_factory()
-    # Actual callback
-    refresh_generator = RefreshGeneratorCallback()
-
 
     epoch_start_time = time.time()
 
 
-    # Training the model
+    # Make separate generators for training (fixing index issue)
+    train_gen = data_generator(x_train, y_train, batch_size)
+    val_gen = data_generator(x_val, y_val, generator_batch_size)
+
+    # Fit model
     history = model.fit(
-        gd_train_generator_factory(),
-        validation_data=val_generator_factory(),
+        train_gen,
+        validation_data=val_gen,
         steps_per_epoch=steps_per_epoch,
         validation_steps=validation_steps,
         epochs=epochs,
-        callbacks=[r2_callback, lr_scheduler, reduce_lr, early_stopping, refresh_generator],
+        callbacks=[r2_callback, lr_scheduler, reduce_lr, early_stopping],
     )
+
 
     # Calculate the time per epoch
     epoch_end_time = time.time()
@@ -1030,7 +1025,8 @@ def run(params: Dict):
     # ------------------------------------------------------
     # [Req] Save raw predictions in dataframe
     # ------------------------------------------------------
-    if not params["train_subset_data"]:   # temporary fix. incompatible function with subsetting
+    # Data must be subsetted in preprocess AND train or neither. Dangerous if parameter changes wuthout running again
+    if (train_subset_data and preprocess_subset_data) or (not train_subset_data and not preprocess_subset_data):    
         frm.store_predictions_df(
             params,
             y_true=val_true,
