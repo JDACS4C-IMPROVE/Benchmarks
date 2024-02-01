@@ -5,17 +5,15 @@
 # arg 3 CANDLE_CONFIG
 
 ### Path and Name to your CANDLEized model's main Python script###
-
-# e.g. CANDLE_MODEL=graphdrp_baseline_pytorch.py
 CANDLE_MODEL_PRE=uno_preprocess_improve.py
 CANDLE_MODEL=uno_train_improve.py
 
 # Set env if CANDLE_MODEL is not in same directory as this script
-IMPROVE_MODEL_DIR=${IMPROVE_MODEL_DIR:-$( dirname -- "$0" )}
+CANDLE_MODEL_DIR=${CANDLE_MODEL_DIR:-$( dirname -- "$0" )}
 
 # Combine path and name and check if executable exists
-CANDLE_MODEL_PRE=${IMPROVE_MODEL_DIR}/${CANDLE_MODEL_PRE}
-CANDLE_MODEL=${IMPROVE_MODEL_DIR}/${CANDLE_MODEL}
+CANDLE_MODEL_PRE=${CANDLE_MODEL_DIR}/${CANDLE_MODEL_PRE}
+CANDLE_MODEL=${CANDLE_MODEL_DIR}/${CANDLE_MODEL}
 if [ ! -f ${CANDLE_MODEL} ] ; then
 	echo No such file ${CANDLE_MODEL}
 	exit 404

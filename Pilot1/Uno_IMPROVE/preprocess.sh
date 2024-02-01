@@ -7,13 +7,13 @@
 # Preprocess python script here requires the IMPROVE cross-study data
 # e.g. for experiments CCLE-CCLE, CTRPv2-gCSI. Current list of datasets
 # are: gCSI, CCLE, CTRPv2, GDSCv1, GDSCv2
-IMPROVE_MODEL_PRE=uno_preprocess_improve.py
+CANDLE_MODEL_PRE=uno_preprocess_improve.py
 
 # Set env if CANDLE_MODEL is not in same directory as this script
-IMPROVE_MODEL_DIR=${IMPROVE_MODEL_DIR:-$( dirname -- "$0" )}
+CANDLE_MODEL_DIR=${CANDLE_MODEL_DIR:-$( dirname -- "$0" )}
 
 # Combine path and name and check if executable exists
-IMPROVE_MODEL_PRE=${IMPROVE_MODEL_DIR}/${IMPROVE_MODEL_PRE}
+CANDLE_MODEL_PRE=${CANDLE_MODEL_DIR}/${CANDLE_MODEL_PRE}
 if [ ! -f ${CANDLE_MODEL} ] ; then
     echo "No such file ${CANDLE_MODEL}"
     exit 404
@@ -30,7 +30,7 @@ fi
 IMPROVE_DATA_DIR=$1
 
 # Command to execute the Python script
-CMD="python ${IMPROVE_MODEL_PRE} ${IMPROVE_DATA_DIR}"
+CMD="python ${CANDLE_MODEL_PRE} ${IMPROVE_DATA_DIR}"
 echo "CMD = $CMD"
 
 # Display runtime arguments
