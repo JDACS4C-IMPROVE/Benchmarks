@@ -21,8 +21,10 @@
 
 In order to run the modified version of the code, you need to run the following commands:
 ```
-export IMPROVE_DATA_DIR=<UNO_PATH>csa_data or other as per desired directory
+single_drug_drp/benchmark-data-pilot1/csa_data/
+export IMPROVE_DATA_DIR=<DESIRED_DATA_DIR>
+wget --cut-dirs=8 -P ~/$IMPROVE_DATA_DIR -nH -np -m https://web.cels.anl.gov/projects/IMPROVE_FTP/candle/public/improve/benchmarks/
 export PYTHONPATH=<IMPROVE_LIBRARY>/:$PYTHONPATH 
-python uno_preprocess.py
-python uno_train.py
+python uno_preprocess_improve.py
+python uno_train_improve.py
 ```
