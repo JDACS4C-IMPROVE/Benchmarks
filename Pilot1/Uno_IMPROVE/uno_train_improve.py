@@ -594,6 +594,12 @@ model_train_params = [
         "help": "Batch size for training.",
     },
     {
+        "name": "generator_batch_size",
+        "type": int,
+        "default": 1024,
+        "help": "Batch size for prediction.",
+    },
+    {
         "name": "raw_max_lr",
         "type": float,
         "default": 1e-8,
