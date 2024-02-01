@@ -1,21 +1,19 @@
 #!/bin/bash
 
-#########################################################################
-### THIS IS A TEMPLATE FILE. SUBSTITUTE #PATH# WITH THE MODEL EXECUTABLE.
-#########################################################################
-
 # arg 1 IMPROVE_DATA_DIR
 
 ### Path and Name to your CANDLEized model's main Python script###
 
-# e.g. CANDLE_MODEL=graphdrp_preprocess.py
-CANDLE_MODEL=uno_preprocess_improve.py
+# Preprocess python script here requires the IMPROVE cross-study data
+# e.g. for experiments CCLE-CCLE, CTRPv2-gCSI. Current list of datasets
+# are: gCSI, CCLE, CTRPv2, GDSCv1, GDSCv2
+IMPROVE_MODEL_PRE=uno_preprocess_improve.py
 
 # Set env if CANDLE_MODEL is not in same directory as this script
 IMPROVE_MODEL_DIR=${IMPROVE_MODEL_DIR:-$( dirname -- "$0" )}
 
 # Combine path and name and check if executable exists
-CANDLE_MODEL=${IMPROVE_MODEL_DIR}/${CANDLE_MODEL}
+IMPROVE_MODEL_PRE=${IMPROVE_MODEL_DIR}/${IMPROVE_MODEL_PRE}
 if [ ! -f ${CANDLE_MODEL} ] ; then
     echo "No such file ${CANDLE_MODEL}"
     exit 404
@@ -32,7 +30,7 @@ fi
 IMPROVE_DATA_DIR=$1
 
 # Command to execute the Python script
-CMD="python ${CANDLE_MODEL} ${IMPROVE_DATA_DIR}"
+CMD="python ${IMPROVE_MODEL_PRE} ${IMPROVE_DATA_DIR}"
 echo "CMD = $CMD"
 
 # Display runtime arguments
