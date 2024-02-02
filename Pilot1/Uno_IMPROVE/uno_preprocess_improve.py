@@ -9,6 +9,9 @@ from uno_utils_improve import print_duration
 
 # Dependencies: pandas, numpy, joblib, scikit-learn
 
+# [Req] Imports from preprocess script
+from uno_train_improve import train_params
+
 import numpy as np
 import pandas as pd
 import joblib
@@ -533,7 +536,7 @@ def run(params: Dict):
 # [Req]
 def main(args):
     # [Req]
-    additional_definitions=preprocess_params
+    additional_definitions = preprocess_params + train_params
     params = frm.initialize_parameters(
         filepath,
         default_model="uno_default_model.txt",
