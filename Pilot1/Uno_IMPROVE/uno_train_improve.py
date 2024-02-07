@@ -248,8 +248,8 @@ def run(params: Dict):
 
     # Subsetting the data for faster training if desired
     if train_subset_data:
-        # Subset 5000 samples (or all for small datasets)
-        total_num_samples = 25000
+        # Subset total_num_samples (or all for small datasets)
+        total_num_samples = 5000
         dataset_proportions = {"train": 0.8, "validation": 0.1, "test": 0.1}
         dataset_size = tr_data.shape[0] + vl_data.shape[0] + ts_data.shape[0]
         if total_num_samples >= dataset_size:
