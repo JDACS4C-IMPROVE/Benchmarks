@@ -2,22 +2,44 @@ import numpy as np
 import traceback
 
 
-def data_generator(x_data, y_data, batch_size, verbose=False):
+def data_generator(x_data, y_data, batch_size, shuffle=False, peek=False, verbose=False):
     num_samples = len(x_data)
+    indices = np.arange(num_samples)
     
-    while True:  # Loop indefinitely for epochs
-        for offset in range(0, num_samples, batch_size):
-            # Calculate end of the current batch
-            end = min(offset + batch_size, num_samples)
-            
+    if peek:    # Give first batch unshuffled and don't change start index when peeking for training
+        end = min(batch_size, num_samples)
+        if verbose:
+            print(f"Generating peeking batch up to index {end}")
+        batch_x = x_data[:end]
+        batch_y = y_data[:end]
+        peek = False
+        yield (batch_x, batch_y)
+
+    while True:    # Loop indefinitely for epochs
+        # Shuffle indices at the start of each epoch after the peek, if shuffle is enabled
+        if shuffle:
+            np.random.shuffle(indices)
+        
+        for start in range(0, num_samples, batch_size):
+            end = min(start + batch_size, num_samples)
+            batch_indices = indices[start:end]
+
             # Print batch indices if verbose
             if verbose:
-                print(f"Generating batch from index {offset} to {end}")
+                # Warning: calling verbose when shuffling will usually clutter output
+                if shuffle:
+                    if len(batch_indices) < 64:
+                        print(f"Batch indices: {np.sort(batch_indices)}")
+                    else:
+                        print(f"Printing batch indices would clutter output. Skipped.")
+                    print(f"Length: {len(batch_indices)}")
+                else:
+                    print(f"Generating batch from index {start} to {end}")
                 # traceback.print_stack()
 
             # Generate batches
-            batch_x = x_data[offset:end]
-            batch_y = y_data[offset:end]
+            batch_x = x_data[batch_indices]
+            batch_y = y_data[batch_indices]
 
             # Yield the current batch
             yield (batch_x, batch_y)

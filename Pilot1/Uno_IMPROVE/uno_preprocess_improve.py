@@ -444,7 +444,8 @@ def run(params: Dict):
 # [Req]
 def main(args):
     # [Req]
-    additional_definitions = preprocess_params + train_params
+    additional_definitions = preprocess_params + train_params  # Required for HPO
+    # original: additional_definitions = preprocess_params
     params = frm.initialize_parameters(
         filepath,
         default_model="uno_default_model.txt",

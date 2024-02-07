@@ -635,6 +635,12 @@ model_train_params = [
         "help": "Activation for ninth interaction layer.",
     },
     {
+        "name": "regression_activation",
+        "type": str,
+        "default": "sigmoid",
+        "help": "Activation for final regression output.",
+    },
+    {
         "name": "epochs",
         "type": int,
         "default": 150,

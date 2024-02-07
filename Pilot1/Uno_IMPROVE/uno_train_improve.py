@@ -206,7 +206,7 @@ def run(params: Dict):
         drug_layers_size.append(params[f"drug_layer_{i+1}_size"])
         drug_layers_dropout.append(params[f"drug_layer_{i+1}_dropout"])
         drug_layers_activation.append(params[f"drug_layer_{i+1}_activation"])
-    # Additional Layers (after concatenation)
+    # Additional layers (after concatenation)
     interaction_num_layers = params["interaction_num_layers"]
     interaction_layers_size = []
     interaction_layers_dropout = []
@@ -217,6 +217,8 @@ def run(params: Dict):
         interaction_layers_activation.append(
             params[f"interaction_layer_{i+1}_activation"]
         )
+    # Final regression layer
+    regression_activation = params["regression_activation"]
     # Print architecture in debug mode
     if train_debug:
         print("CANCER LAYERS:")
@@ -247,7 +249,7 @@ def run(params: Dict):
     # Subsetting the data for faster training if desired
     if train_subset_data:
         # Subset 5000 samples (or all for small datasets)
-        total_num_samples = 5000
+        total_num_samples = 25000
         dataset_proportions = {"train": 0.8, "validation": 0.1, "test": 0.1}
         dataset_size = tr_data.shape[0] + vl_data.shape[0] + ts_data.shape[0]
         if total_num_samples >= dataset_size:
@@ -318,7 +320,7 @@ def run(params: Dict):
         )
 
     # Final output layer
-    output = Dense(1)(interaction_encoded)  # A single continuous value such as AUC
+    output = Dense(1, activation=regression_activation)(interaction_encoded)  # A single continuous value such as AUC
 
     # Compile Model
     model = Model(inputs=all_input, outputs=output)
@@ -326,6 +328,9 @@ def run(params: Dict):
         optimizer=optimizer,
         loss="mean_squared_error",
     )
+    # Observe model if debugging mode
+    if train_debug:
+        model.summary()
 
 
     # Number of batches for data loading and callbacks
@@ -376,7 +381,8 @@ def run(params: Dict):
         train_steps=train_steps,
         validation_steps=validation_steps,
         sstot_train=sstot_train,
-        sstot_val=sstot_val
+        sstot_val=sstot_val,
+        train_debug=train_debug
     )
 
 
@@ -384,8 +390,8 @@ def run(params: Dict):
 
 
     # Make separate generators for training (fixing index issue)
-    train_gen = data_generator(x_train, y_train, batch_size)
-    val_gen = data_generator(x_val, y_val, generator_batch_size)
+    train_gen = data_generator(x_train, y_train, batch_size, shuffle=True, peek=True)
+    val_gen = data_generator(x_val, y_val, generator_batch_size, peek=True)
 
     # Fit model
     history = model.fit(
@@ -406,6 +412,7 @@ def run(params: Dict):
 
     # Save model
     model.save(modelpath)
+
 
     # Batch prediction (and flatten inside function)
     # Make sure to make new generator state so no index problem
