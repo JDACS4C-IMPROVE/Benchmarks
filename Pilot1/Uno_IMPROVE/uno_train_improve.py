@@ -41,10 +41,16 @@ print(tf.config.list_physical_devices('GPU'))
 
 filepath = Path(__file__).resolve().parent  # [Req]
 
+"""
 # Notes: 
-# Model.fit initalizes batch before epoch, causing that generator to be off a batch size.
-# Do not use same generator to make predictions... results in index shift that cause v1=v2 error
-# Highly differing training and evaluation batch sizes possibly causes odd behavior?
+  - Model.fit initalizes batch before epoch, causing that generator to be off a batch size.
+  - Do not use same generator to make predictions... results in index shift that cause v1=v2 error
+  - Predictions are underestimates much more often than not... probably because there are lots of
+    auc values close to 1 because we only have effective drugs in our dataset and sigmoid has high
+    curvature, making extreme values very difficult. If we have lots of ineffective drugs, we will
+    have extreme values close to 0 as well. Worth coming up with a more straightened out activation
+    function to allow for extreme values more often.
+"""
 
 # ---------------------
 # [Req] Parameter lists
