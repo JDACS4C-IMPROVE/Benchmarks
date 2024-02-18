@@ -665,15 +665,6 @@ model_train_params = [
         "help": "Raw maximum learning rate that is later scaled according to batch size.",
     },
     {
-        "name": "lr_log_10_range",
-        "type": int,
-        "default": 3,
-        "help": """
-                Log 10 range for min learning from initial 
-                learning rate. Used in warmup and plateau.
-                """,
-    },
-    {
         "name": "warmup_epochs",
         "type": int,
         "default": 5,

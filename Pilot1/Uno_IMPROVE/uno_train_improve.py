@@ -179,12 +179,12 @@ def run(params: Dict):
     batch_size = params["batch_size"]
     generator_batch_size = params["generator_batch_size"]
     raw_max_lr = params["raw_max_lr"]
-    raw_min_lr = raw_max_lr / (10 ** params["lr_log_10_range"])
+    raw_min_lr = raw_max_lr / 1000
     max_lr = raw_max_lr * batch_size
     min_lr = raw_min_lr * batch_size
     warmup_epochs = params["warmup_epochs"]
     warmup_type = params["warmup_type"]
-    initial_lr = min_lr
+    initial_lr = raw_max_lr / 10
     reduce_lr_factor = params["reduce_lr_factor"]
     reduce_lr_patience = params["reduce_lr_patience"]
     early_stopping_patience = params["early_stopping_patience"]
@@ -469,7 +469,7 @@ def main(args):
     additional_definitions = preprocess_params + train_params
     params = frm.initialize_parameters(
         filepath,
-        default_model="uno_default_model.txt",
+        default_model="uno_default_model_hpo.txt",
         additional_definitions=additional_definitions,
         # required=req_train_params,
         required=None,
