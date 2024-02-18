@@ -661,7 +661,7 @@ model_train_params = [
     {
         "name": "raw_max_lr",
         "type": float,
-        "default": 1e-8,
+        "default": 1e-5,
         "help": "Raw maximum learning rate that is later scaled according to batch size.",
     },
     {

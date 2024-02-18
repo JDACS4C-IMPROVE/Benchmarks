@@ -184,7 +184,7 @@ def run(params: Dict):
     min_lr = raw_min_lr * batch_size
     warmup_epochs = params["warmup_epochs"]
     warmup_type = params["warmup_type"]
-    initial_lr = raw_max_lr / 10
+    initial_lr = raw_max_lr / 1000
     reduce_lr_factor = params["reduce_lr_factor"]
     reduce_lr_patience = params["reduce_lr_patience"]
     early_stopping_patience = params["early_stopping_patience"]

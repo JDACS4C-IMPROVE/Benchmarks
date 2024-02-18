@@ -22,16 +22,33 @@ fi
 # Check if IMPROVE_DATA_DIR is provided
 if [ $# -lt 1 ] ; then
     echo "Illegal number of parameters"
-    echo "Usage: $0 IMPROVE_DATA_DIR"
-    exit 1
+    echo "IMPROVE_DATA_DIR is required"
+    exit -1
 fi
 
-# Assign the first argument to IMPROVE_DATA_DIR
-IMPROVE_DATA_DIR=$1
+if [ $# -eq 1 ] ; then
+    IMPROVE_DATA_DIR=$1 ; shift
+    CMD="python ${CANDLE_MODEL}"
+    echo "CMD = $CMD"
 
-# Command to execute the Python script
-CMD="python ${CANDLE_MODEL} ${IMPROVE_DATA_DIR}"
-echo "CMD = $CMD"
+elif [ $# -ge 2 ] ; then
+        IMPROVE_DATA_DIR=$1 ; shift
+
+        # if $2 is a file, then set candle_config
+        if [ -f $IMPROVE_DATA_DIR/$1 ] ; then
+		echo "$1 is a file"
+                CANDLE_CONFIG=$1 ; shift
+                CMD="python ${CANDLE_MODEL} --config_file $CANDLE_CONFIG $@"
+                echo "CMD = $CMD $@"
+
+        # else passthrough $@
+        else
+		echo "$1 is not a file"
+                CMD="python ${CANDLE_MODEL} $@"
+                echo "CMD = $CMD"
+
+        fi
+fi
 
 # Display runtime arguments
 echo "using IMPROVE_DATA_DIR ${IMPROVE_DATA_DIR}"
@@ -40,5 +57,4 @@ echo "running command ${CMD}"
 
 # Set up environmental variables and execute model
 # source /opt/conda/bin/activate /usr/local/conda_envs/Paccmann_MCA
-
 IMPROVE_DATA_DIR=${IMPROVE_DATA_DIR} $CMD

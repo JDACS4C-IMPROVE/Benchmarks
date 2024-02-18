@@ -19,7 +19,6 @@ fi
 
 
 if [ $# -lt 2 ] ; then
-        echo "Illegalnumber of paramaters"
         echo "Illegal number of parameters"
         echo "CUDA_VISIBLE_DEVICES IMPROVE_DATA_DIR are required"
         exit -1
