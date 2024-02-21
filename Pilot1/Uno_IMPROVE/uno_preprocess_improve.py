@@ -458,7 +458,7 @@ def main(args):
     # original: additional_definitions = preprocess_params
     params = frm.initialize_parameters(
         filepath,
-        default_model="uno_default_model_hpo.txt",
+        default_model="uno_default_model.txt",
         additional_definitions=additional_definitions,
         # required=req_preprocess_params,
         required=None,

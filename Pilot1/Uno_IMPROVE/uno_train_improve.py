@@ -124,7 +124,7 @@ class R2Callback(Callback):
         ssres = np.sum((y_true - y_pred) ** 2)
         r2 = 1 - (ssres / sstot)
         if train_debug:
-            print("R2 Calculation:")
+            print("\n R2 Calculation:")
             print(f"y_pred Size: {len(y_pred)}")
             print(f"y_true Size: {len(y_true)}")
             print(f"SSres Check: {ssres}")
@@ -151,6 +151,44 @@ def get_optimizer(optimizer_name, initial_lr):
         return tf.keras.optimizers.Ftrl(learning_rate=initial_lr)
     else:
         raise ValueError(f"Optimizer '{optimizer_name}' is not recognized")
+    
+
+def read_architecture(params, hyperparam_space, arch_type):
+    # Setup the architecture for cancer, drug, and interaction layers.
+    """
+    This function is made to allow for different hyperparameter spaces to be used for the architecture,
+    allowing for global, block, and layer hyperparameter spaces when performing HPO. Depending on whether
+    the hyperparameter space is global, block, or layer, the architecture will read from the global,
+    block, or layer hyperparameters from the default model file for the cancer, drug, and interaction layers. 
+    This way, the architecture can be defined in a more flexible way, allowing for more complex architectures 
+    to be defined.
+    """
+    layers_size = []
+    layers_dropout = []
+    layers_activation = []
+
+    if hyperparam_space == "global":
+        if arch_type == "canc" or "drug":
+            num_layers = 3
+        elif arch_type == "interaction":
+            num_layers = 5
+        layers_size = [1000] * num_layers
+        layers_dropout = [params["dropout"]] * num_layers
+        layers_activation = [params["activation"]] * num_layers
+    elif hyperparam_space == "block":
+        num_layers = params[f"{arch_type}_num_layers"]
+        arch = params[f"{arch_type}_arch"]
+        layers_size = arch
+        layers_dropout = [params[f"{arch_type}_dropout"]] * num_layers
+        layers_activation = [params[f"{arch_type}_activation"]] * num_layers
+    elif hyperparam_space == "layer":
+        num_layers = params[f"{arch_type}_num_layers"]
+        for i in range(num_layers):
+            layers_size.append(params[f"{arch_type}_layer_{i+1}_size"])
+            layers_dropout.append(params[f"{arch_type}_layer_{i+1}_dropout"])
+            layers_activation.append(params[f"{arch_type}_layer_{i+1}_activation"])
+
+    return num_layers, layers_size, layers_dropout, layers_activation
 
 
 def run(params: Dict):
@@ -197,38 +235,20 @@ def run(params: Dict):
     train_subset_data = params["train_subset_data"]
     preprocess_subset_data = params["preprocess_subset_data"]
 
+
     # Architecture Hyperparams
-    # Cancer
-    canc_num_layers = params["canc_num_layers"]
-    canc_layers_size = []
-    canc_layers_dropout = []
-    canc_layers_activation = []
-    for i in range(canc_num_layers):
-        canc_layers_size.append(params[f"canc_layer_{i+1}_size"])
-        canc_layers_dropout.append(params[f"canc_layer_{i+1}_dropout"])
-        canc_layers_activation.append(params[f"canc_layer_{i+1}_activation"])
-    # Drug
-    drug_num_layers = params["drug_num_layers"]
-    drug_layers_size = []
-    drug_layers_dropout = []
-    drug_layers_activation = []
-    for i in range(drug_num_layers):
-        drug_layers_size.append(params[f"drug_layer_{i+1}_size"])
-        drug_layers_dropout.append(params[f"drug_layer_{i+1}_dropout"])
-        drug_layers_activation.append(params[f"drug_layer_{i+1}_activation"])
-    # Additional layers (after concatenation)
-    interaction_num_layers = params["interaction_num_layers"]
-    interaction_layers_size = []
-    interaction_layers_dropout = []
-    interaction_layers_activation = []
-    for i in range(interaction_num_layers):
-        interaction_layers_size.append(params[f"interaction_layer_{i+1}_size"])
-        interaction_layers_dropout.append(params[f"interaction_layer_{i+1}_dropout"])
-        interaction_layers_activation.append(
-            params[f"interaction_layer_{i+1}_activation"]
-        )
+    hyperparam_space = params["hyperparam_space"]
+    print(f"Hyperparam Space: {hyperparam_space}")
+
+    # Read architecture for cancer, drug, and interaction layers
+    # Uses the read_architecture function to allow for different hyperparameter spaces
+    canc_num_layers, canc_layers_size, canc_layers_dropout, canc_layers_activation = read_architecture(params, hyperparam_space, "canc")
+    drug_num_layers, drug_layers_size, drug_layers_dropout, drug_layers_activation = read_architecture(params, hyperparam_space, "drug")
+    interaction_num_layers, interaction_layers_size, interaction_layers_dropout, interaction_layers_activation = read_architecture(params, hyperparam_space, "interaction")
+
     # Final regression layer
     regression_activation = params["regression_activation"]
+
     # Print architecture in debug mode
     if train_debug:
         print("CANCER LAYERS:")
@@ -240,7 +260,10 @@ def run(params: Dict):
             interaction_layers_size,
             interaction_layers_dropout,
             interaction_layers_activation,
-        )
+            )
+        print("REGRESSION LAYER:")
+        print(regression_activation)
+
 
     # ------------------------------------------------------
     # [Req] Create data names for train and val sets
@@ -479,7 +502,7 @@ def main(args):
     additional_definitions = preprocess_params + train_params
     params = frm.initialize_parameters(
         filepath,
-        default_model="uno_default_model_hpo.txt",
+        default_model="uno_default_model.txt",
         additional_definitions=additional_definitions,
         # required=req_train_params,
         required=None,
