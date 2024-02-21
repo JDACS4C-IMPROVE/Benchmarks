@@ -163,7 +163,7 @@ def scale_df(
             scaler = StandardScaler()
         elif scaler_name == "minmax":
             scaler = MinMaxScaler()
-        elif scaler_name == "minabs":
+        elif scaler_name == "maxabs":
             scaler = MaxAbsScaler()
         elif scaler_name == "robust":
             scaler = RobustScaler()
@@ -185,6 +185,16 @@ def scale_df(
 
     # Copy back scaled data to data frame
     df[df_num.columns] = df_norm
+
+    # Remove rows with NaN or inf values and print proportion of rows removed
+    rows_before = df.shape[0]
+    df.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace inf with NaN
+    df.dropna(inplace=True)  # Remove rows with NaN values
+    rows_after = df.shape[0]
+    proportion_removed = (rows_before - rows_after) / rows_before
+    print(f"Proportion of rows removed for corrupted data: {proportion_removed:.3%}")
+
+    # Return value
     return df, scaler
 
 

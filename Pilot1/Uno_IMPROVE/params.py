@@ -61,7 +61,7 @@ model_preproc_params = [
         "name": "ge_scaling",
         "type": str,
         "default": "std",
-        "choice": ["std", "minmax", "miabs", "robust", "l1", "l2", "max", "power_yj"],
+        "choice": ["std", "minmax", "maxabs", "robust", "l1", "l2", "max", "power_yj"],
         "help": "Scaler for gene expression data.",
     },
     {

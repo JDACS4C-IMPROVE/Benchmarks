@@ -16,7 +16,7 @@ from tensorflow.keras.models import load_model
 # [Req] Imports from other scripts
 from uno_preprocess_improve import preprocess_params
 from uno_train_improve import metrics_list, train_params
-from uno_utils_improve import data_generator, batch_predict, print_duration
+from uno_utils_improve import data_generator, batch_predict, print_duration, clean_arrays, check_array
 
 filepath = Path(__file__).resolve().parent  # [Req]
 
@@ -111,10 +111,13 @@ def run(params: Dict):
     # ------------------------------------------------------
     # [Req] Compute performance scores
     # ------------------------------------------------------
+    # Make sure test scores don't contain NANs
+    test_pred_clean, test_true_clean = clean_arrays(test_pred, test_true)
+    # Compute scores
     test_scores = frm.compute_performace_scores(
         params,
-        y_true=test_true,
-        y_pred=test_pred,
+        y_true=test_true_clean,
+        y_pred=test_pred_clean,
         stage="test",
         outdir=params["infer_outdir"],
         metrics=metrics_list,

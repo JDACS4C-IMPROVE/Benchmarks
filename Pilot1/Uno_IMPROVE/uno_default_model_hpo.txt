@@ -5,21 +5,21 @@ y_col_name = "auc"
 [Preprocess]
 train_split_file = "gCSI_split_0_train.txt"
 val_split_file = "gCSI_split_0_val.txt"
-test_split_file = "gCSI_split_0_test.txt"
-ml_data_outdir = "./ml_data/gCSI-gCSI/split_0"
+test_split_file = "CTRPv2_all.txt"
+ml_data_outdir = "./ml_data/gCSI-CTRPv2/split_0"
 data_format = ".parquet"
 y_data_files = [["response.tsv"]]
 x_data_canc_files = [["cancer_gene_expression.tsv",  ["Gene_Symbol"]]]
 x_data_drug_files = [["drug_mordred.tsv"]]
 use_lincs = False
-ge_scaling = "minabs"
+ge_scaling = "maxabs"
 md_scaling = "power_yj"
 preprocess_debug = False
 preprocess_subset_data = False
 
 [Train]
-train_ml_data_dir = "./ml_data/gCSI-gCSI/split_0"
-val_ml_data_dir = "./ml_data/gCSI-gCSI/split_0"
+train_ml_data_dir = "./ml_data/gCSI-CTRPv2/split_0"
+val_ml_data_dir = "./ml_data/gCSI-CTRPv2/split_0"
 model_outdir = "./out_models/gCSI/split_0"
 model_file_name = "uno_improve"
 model_file_format = ".py"
@@ -128,6 +128,6 @@ train_debug = False
 train_subset_data = False
 
 [Infer]
-test_ml_data_dir = "./ml_data/gCSI-gCSI/split_0"
+test_ml_data_dir = "./ml_data/gCSI-CTRPv2/split_0"
 model_dir = "./out_models/gCSI/split_0"
-infer_outdir = "./out_infer/gCSI-gCSI/split_0"
+infer_outdir = "./out_infer/gCSI-CTRPv2/split_0"

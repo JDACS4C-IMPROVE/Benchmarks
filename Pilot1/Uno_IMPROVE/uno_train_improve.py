@@ -12,13 +12,14 @@ from improve import framework as frm
 from params import app_preproc_params, model_preproc_params, app_train_params, model_train_params
 
 # Import custom made functions
-from uno_utils_improve import data_generator, batch_predict, print_duration
+from uno_utils_improve import data_generator, batch_predict, print_duration, clean_arrays, check_array
 
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 # Configure GPU memory growth for big datasets
 gpus = tf.config.experimental.list_physical_devices('GPU')
+print(tf.config.experimental.list_physical_devices('GPU'))
 # if gpus:
 #     try:
 #         for gpu in gpus:
@@ -46,10 +47,13 @@ filepath = Path(__file__).resolve().parent  # [Req]
   - Model.fit initalizes batch before epoch, causing that generator to be off a batch size.
   - Do not use same generator to make predictions... results in index shift that cause v1=v2 error
   - Predictions are underestimates much more often than not... probably because there are lots of
-    auc values close to 1 because we only have effective drugs in our dataset and sigmoid has high
+    auc values close to 1 because we only have effective drugs in our dataset and sigmoid has small
     curvature, making extreme values very difficult. If we have lots of ineffective drugs, we will
     have extreme values close to 0 as well. Worth coming up with a more straightened out activation
     function to allow for extreme values more often.
+  - power_yj scaler that is made from a different cross-study dataset can cause NaNs from exploding
+    or vanishing gradients. This is because the power_yj scaler is not robust to extreme values and
+    requires cleaning of the array before storing test scores.
 """
 
 # ---------------------
@@ -429,7 +433,7 @@ def run(params: Dict):
     # ------------------------------------------------------
     # [Req] Save raw predictions in dataframe
     # ------------------------------------------------------
-    # Data must be subsetted in preprocess AND train or neither. Dangerous if parameter changes wuthout running again
+    # Data must be subsetted in preprocess AND train or neither. Dangerous if parameter changes without running again
     if (train_subset_data and preprocess_subset_data) or (not train_subset_data and not preprocess_subset_data):    
         frm.store_predictions_df(
             params,
@@ -450,11 +454,17 @@ def run(params: Dict):
         outdir=params["model_outdir"],
         metrics=metrics_list,
     )
+
+    # Make sure test scores don't contain NANs
+    test_pred_clean, test_true_clean = clean_arrays(test_pred, test_true)
+    if train_debug:
+        check_array(test_pred_clean)
+
     # Compute test scores
     test_scores = frm.compute_performace_scores(
         params,
-        y_true=test_true,
-        y_pred=test_pred,
+        y_true=test_true_clean,
+        y_pred=test_pred_clean,
         stage="test",
         outdir=params["model_outdir"],
         metrics=metrics_list,

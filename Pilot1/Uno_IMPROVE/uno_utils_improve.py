@@ -1,5 +1,4 @@
 import numpy as np
-import traceback
 
 
 def data_generator(x_data, y_data, batch_size, shuffle=False, peek=False, verbose=False):
@@ -71,3 +70,43 @@ def print_duration(activity: str, start_time: float, end_time: float):
     seconds = int(duration % 60)
 
     print(f"Time for {activity}: {hours} hours, {minutes} minutes, and {seconds} seconds\n")
+
+
+def clean_arrays(test_pred, test_true):
+    # Initialize clean arrays
+    test_pred_clean = test_pred
+    test_true_clean = test_true
+
+    # Find NaN indices and remove
+    nan_indices = np.where(np.isnan(test_pred))[0]
+    test_pred_clean = np.delete(test_pred_clean, nan_indices)
+    test_true_clean = np.delete(test_true_clean, nan_indices)
+
+    # Find infinity indices and remove
+    inf_indices = np.where(np.isinf(test_pred))[0]
+    test_pred_clean = np.delete(test_pred_clean, inf_indices)
+    test_true_clean = np.delete(test_true_clean, inf_indices)
+
+    # Print the number and percent of removed indices
+    start_len = len(test_pred)
+    end_len = len(test_pred_clean)
+    print(f"Removed {start_len - end_len} values due to NaN or infinity values.")
+    print(f"Removed {100 * (start_len - end_len) / start_len:.3f}% of data due to NaN or infinity values.")
+
+    return test_pred_clean, test_true_clean
+
+
+def check_array(array):
+    # Print shape
+    print(f"Shape: {array.shape}")
+
+    # Print the first few values
+    print("First few values:", array[:5])
+
+    # Check and print indices/values for NaN values
+    nan_indices = np.where(np.isnan(array))[0]
+    print("Indices of NaN:", nan_indices[:5])
+
+    # Check and print indices/values for infinity values
+    inf_indices = np.where(np.isinf(array))[0]
+    print("Indices of infinity:", inf_indices[:5])
