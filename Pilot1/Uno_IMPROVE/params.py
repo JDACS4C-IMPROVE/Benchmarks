@@ -204,7 +204,7 @@ model_train_params = [
     },
     {
         "name": "hyperparam_space",
-        "type": "string",
+        "type": str,
         "default": "global",
         "help": "Defines the hyperparameter space to use. Could be global, by block, or by layer"
     },
@@ -212,13 +212,13 @@ model_train_params = [
 
     {
         "name": "dropout",
-        "type": "float",
+        "type": float,
         "default": 0.1,
         "help": "Global dropout rate."
     },
     {
         "name": "activation",
-        "type": "string",
+        "type": str,
         "default": "relu",
         "help": "Global activation function."
     },
@@ -226,55 +226,55 @@ model_train_params = [
 
     {
         "name": "canc_arch",
-        "type": "int",
+        "type": int,
         "default": [1000, 1000, 1000],
         "help": "Block architecture for cancer layers."
     },
     {
         "name": "canc_activation",
-        "type": "string",
+        "type": str,
         "default": "relu",
         "help": "Block activation function for cancer layers."
     },
     {
         "name": "canc_dropout",
-        "type": "float",
+        "type": float,
         "default": 0.1,
         "help": "Block dropout rate for cancer layers."
     },
     {
         "name": "drug_arch",
-        "type": "list[int]",
+        "type": int,
         "default": [1000, 1000, 1000],
         "help": "Block architecture for drug layers."
     },
     {
         "name": "drug_activation",
-        "type": "string",
+        "type": str,
         "default": "relu",
         "help": "Block activation function for drug layers."
     },
     {
         "name": "drug_dropout",
-        "type": "float",
+        "type": float,
         "default": 0.1,
         "help": "Block dropout rate for drug layers."
     },
     {
         "name": "interaction_arch",
-        "type": "list[int]",
+        "type": int,
         "default": [1000, 1000, 1000, 1000, 1000],
         "help": "Block architecture for interaction layers."
     },
     {
         "name": "interaction_activation",
-        "type": "string",
+        "type": str,
         "default": "relu",
         "help": "Block activation function for interaction layers."
     },
     {
         "name": "interaction_dropout",
-        "type": "float",
+        "type": float,
         "default": 0.1,
         "help": "Block dropout rate for interaction layers."
     },
