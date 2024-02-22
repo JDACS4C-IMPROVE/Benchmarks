@@ -119,6 +119,168 @@ app_train_params = []
 # If no params are required by the model, then it should be an empty list.
 model_train_params = [
     {
+        "name": "epochs",
+        "type": int,
+        "default": 150,
+        "help": "Number of epochs in training.",
+    },
+    {
+        "name": "batch_size",
+        "type": int,
+        "default": 32,
+        "help": "Batch size for training.",
+    },
+    {
+        "name": "generator_batch_size",
+        "type": int,
+        "default": 1024,
+        "help": "Batch size for prediction.",
+    },
+    {
+        "name": "raw_max_lr",
+        "type": float,
+        "default": 1e-5,
+        "help": "Raw maximum learning rate that is later scaled according to batch size.",
+    },
+    {
+        "name": "warmup_epochs",
+        "type": int,
+        "default": 5,
+        "help": "Number of warmup epochs.",
+    },
+    {
+        "name": "warmup_type",
+        "type": str,
+        "default": "quadratic",
+        "help": "Type of warmup for learning rate.",
+    },
+    {
+        "name": "reduce_lr_patience",
+        "type": int,
+        "default": 3,
+        "help": "Patience epochs for reducing learning rate.",
+    },
+    {
+        "name": "reduce_lr_factor",
+        "type": float,
+        "default": 0.5,
+        "help": "Factor for reducing learning rate after plateau.",
+    },
+    {
+        "name": "optimizer",
+        "type": str,
+        "default": "Adam",
+        "help": "Optimizer for gradient descent.",
+    },
+    {
+        "name": "loss",
+        "type": str,
+        "default": "mse",
+        "help": "Loss function to be used.",
+    },
+    {
+        "name": "early_stop_metric",
+        "type": str,
+        "default": "mse",
+        "help": "Loss function for early stopping",
+    },
+    {
+        "name": "early_stopping_patience",
+        "type": int,
+        "default": 20,
+        "help": "Patience for early stopping training after no improvement",
+    },
+    {
+        "name": "train_debug",
+        "type": bool,
+        "default": False,
+        "help": "Debug mode to show training information",
+    },
+    {
+        "name": "train_subset_data",
+        "type": bool,
+        "default": False,
+        "help": "Subsetting data for faster test runs",
+    },
+    {
+        "name": "hyperparam_space",
+        "type": "string",
+        "default": "global",
+        "help": "Defines the hyperparameter space to use. Could be global, by block, or by layer"
+    },
+
+
+    {
+        "name": "dropout",
+        "type": "float",
+        "default": 0.1,
+        "help": "Global dropout rate."
+    },
+    {
+        "name": "activation",
+        "type": "string",
+        "default": "relu",
+        "help": "Global activation function."
+    },
+
+
+    {
+        "name": "canc_arch",
+        "type": "int",
+        "default": [1000, 1000, 1000],
+        "help": "Block architecture for cancer layers."
+    },
+    {
+        "name": "canc_activation",
+        "type": "string",
+        "default": "relu",
+        "help": "Block activation function for cancer layers."
+    },
+    {
+        "name": "canc_dropout",
+        "type": "float",
+        "default": 0.1,
+        "help": "Block dropout rate for cancer layers."
+    },
+    {
+        "name": "drug_arch",
+        "type": "list[int]",
+        "default": [1000, 1000, 1000],
+        "help": "Block architecture for drug layers."
+    },
+    {
+        "name": "drug_activation",
+        "type": "string",
+        "default": "relu",
+        "help": "Block activation function for drug layers."
+    },
+    {
+        "name": "drug_dropout",
+        "type": "float",
+        "default": 0.1,
+        "help": "Block dropout rate for drug layers."
+    },
+    {
+        "name": "interaction_arch",
+        "type": "list[int]",
+        "default": [1000, 1000, 1000, 1000, 1000],
+        "help": "Block architecture for interaction layers."
+    },
+    {
+        "name": "interaction_activation",
+        "type": "string",
+        "default": "relu",
+        "help": "Block activation function for interaction layers."
+    },
+    {
+        "name": "interaction_dropout",
+        "type": "float",
+        "default": 0.1,
+        "help": "Block dropout rate for interaction layers."
+    },
+
+
+    {
         "name": "canc_num_layers",
         "type": int,
         "default": 3,
@@ -633,95 +795,6 @@ model_train_params = [
         "type": str,
         "default": "relu",
         "help": "Activation for ninth interaction layer.",
-    },
-    {
-        "name": "regression_activation",
-        "type": str,
-        "default": "sigmoid",
-        "help": "Activation for final regression output.",
-    },
-    {
-        "name": "epochs",
-        "type": int,
-        "default": 150,
-        "help": "Number of epochs in training.",
-    },
-    {
-        "name": "batch_size",
-        "type": int,
-        "default": 32,
-        "help": "Batch size for training.",
-    },
-    {
-        "name": "generator_batch_size",
-        "type": int,
-        "default": 1024,
-        "help": "Batch size for prediction.",
-    },
-    {
-        "name": "raw_max_lr",
-        "type": float,
-        "default": 1e-5,
-        "help": "Raw maximum learning rate that is later scaled according to batch size.",
-    },
-    {
-        "name": "warmup_epochs",
-        "type": int,
-        "default": 5,
-        "help": "Number of warmup epochs.",
-    },
-    {
-        "name": "warmup_type",
-        "type": str,
-        "default": "quadratic",
-        "help": "Type of warmup for learning rate.",
-    },
-    {
-        "name": "reduce_lr_patience",
-        "type": int,
-        "default": 3,
-        "help": "Patience epochs for reducing learning rate.",
-    },
-    {
-        "name": "reduce_lr_factor",
-        "type": float,
-        "default": 0.5,
-        "help": "Factor for reducing learning rate after plateau.",
-    },
-    {
-        "name": "optimizer",
-        "type": str,
-        "default": "Adam",
-        "help": "Optimizer for gradient descent.",
-    },
-    {
-        "name": "loss",
-        "type": str,
-        "default": "mse",
-        "help": "Loss function to be used.",
-    },
-    {
-        "name": "early_stop_metric",
-        "type": str,
-        "default": "mse",
-        "help": "Loss function for early stopping",
-    },
-    {
-        "name": "early_stopping_patience",
-        "type": int,
-        "default": 12,
-        "help": "Patience for early stopping training after no improvement",
-    },
-    {
-        "name": "train_debug",
-        "type": bool,
-        "default": False,
-        "help": "Debug mode to show training information",
-    },
-    {
-        "name": "train_subset_data",
-        "type": bool,
-        "default": False,
-        "help": "Subsetting data for faster test runs",
-    },
+    }
+
 ]
