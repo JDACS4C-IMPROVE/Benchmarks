@@ -6,7 +6,7 @@
    - uno_infer.py
 
 # Conda Run (Miniconda version: 23.11.0)
-- conda create Uno_IMPROVE python=3.7.16
+- conda create --name Uno_IMPROVE python=3.7.16
 - conda activate Uno_IMPROVE
 - conda config --add channels conda-forge
 - conda install tensorflow-gpu=2.10.0
