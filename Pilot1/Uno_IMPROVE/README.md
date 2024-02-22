@@ -14,9 +14,7 @@
 - pip install protobuf==3.20.0
 - git clone https://github.com/JDACS4C-IMPROVE/IMPROVE.git
 - export PYTHONPATH=<IMPROVE_LIBRARY_PATH>/:$PYTHONPATH
-- pip install pyarrow==12.0.1
-- pip install scikit-learn==1.0.2
-- pip install joblib 1.3.2
+- pip install pyarrow==12.0.1 scikit-learn==1.0.2 joblib==1.3.2
 
 
 In order to run the modified version of the code, you need to run the following commands:
