@@ -5,6 +5,10 @@ import sys
 from pathlib import Path
 from typing import Dict
 
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+
 # [Req] IMPROVE/CANDLE imports
 from improve import framework as frm
 
@@ -14,12 +18,9 @@ from params import app_preproc_params, model_preproc_params, app_train_params, m
 # Import custom made functions
 from uno_utils_improve import data_generator, batch_predict, print_duration, clean_arrays, check_array
 
-import numpy as np
-import pandas as pd
-import tensorflow as tf
-# Configure GPU memory growth for big datasets
-gpus = tf.config.experimental.list_physical_devices('GPU')
-print(tf.config.experimental.list_physical_devices('GPU'))
+# Configure GPUs
+# gpus = tf.config.experimental.list_physical_devices('GPU')
+# print(tf.config.experimental.list_physical_devices('GPU'))
 # if gpus:
 #     try:
 #         for gpu in gpus:
