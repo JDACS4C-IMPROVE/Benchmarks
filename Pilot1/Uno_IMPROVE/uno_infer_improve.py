@@ -72,11 +72,11 @@ def run(params: Dict):
     # ------------------------------------------------------
     # Load model input data (ML data)
     # ------------------------------------------------------
-    ts_df = pd.read_parquet(Path(params["test_ml_data_dir"]) / test_data_fname)
+    ts_data = pd.read_parquet(Path(params["test_ml_data_dir"]) / test_data_fname)
 
     # Get real and predicted y_test and convert to numpy for compatibility
-    y_ts = ts_df[params["y_col_name"]].to_numpy()
-    x_ts = ts_df.drop([params["y_col_name"]], axis=1).to_numpy()
+    y_ts = ts_data[params["y_col_name"]].to_numpy()
+    x_ts = ts_data.drop([params["y_col_name"]], axis=1).to_numpy()
 
     # Test data generator
     generator_batch_size = params["generator_batch_size"]

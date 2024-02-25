@@ -50,6 +50,8 @@ filepath = Path(__file__).resolve().parent  # [Req]
   - power_yj scaler that is made from a different cross-study dataset can cause NaNs from exploding
     or vanishing gradients. This is because the power_yj scaler is not robust to extreme values and
     requires cleaning of the array before storing test scores.
+  - Incorporate R2 calculation into the normal loss calculation? How it's done right now requires
+    loading and predicting the entire dataset again, which is not efficient.
 """
 
 # ---------------------
@@ -266,31 +268,32 @@ def run(params: Dict):
     # ------------------------------------------------------
     train_data_fname = frm.build_ml_data_name(params, stage="train")
     val_data_fname = frm.build_ml_data_name(params, stage="val")
-    test_data_fname = frm.build_ml_data_name(params, stage="test")
 
     # ------------------------------------------------------
     # Load model input data (ML data)
     # ------------------------------------------------------
     tr_data = pd.read_parquet(Path(params["train_ml_data_dir"])/train_data_fname)
     vl_data = pd.read_parquet(Path(params["val_ml_data_dir"])/val_data_fname)
-    ts_data = pd.read_parquet(Path(params["test_ml_data_dir"])/test_data_fname)
 
-    # Subsetting the data for faster training if desired
+    # Subsetting the data for faster training (debugging)
     if train_subset_data:
-        # Subset total_num_samples (or all for small datasets)
+        # Define total number of samples to subset (or all for small datasets)
         total_num_samples = 5000
-        dataset_proportions = {"train": 0.8, "validation": 0.1, "test": 0.1}
-        dataset_size = tr_data.shape[0] + vl_data.shape[0] + ts_data.shape[0]
-        if total_num_samples >= dataset_size:
-            print(f"Small Dataset of Size {dataset_size}. "
-            f"Subsetting to {total_num_samples} Is Skipped")
-        else:
-            num_samples = {dataset: int(total_num_samples * proportion) for dataset, proportion in dataset_proportions.items()}
-            print(f"Subsetting Data To: {num_samples}")
-            # Subsetting the datasets
-            tr_data = tr_data.sample(n=num_samples["train"]).reset_index(drop=True)
-            vl_data = vl_data.sample(n=num_samples["validation"]).reset_index(drop=True)
-            ts_data = ts_data.sample(n=num_samples["test"]).reset_index(drop=True) 
+        dataset_proportions = {"Train": 0.8, "Validation": 0.1}
+        datasets = {"Train": tr_data, "Validation": vl_data}  # Use a dictionary to store datasets
+
+        for key, dataset in datasets.items():
+            proportion = dataset_proportions[key]
+            num_samples = int(total_num_samples * proportion)
+            
+            if num_samples >= dataset.shape[0]:
+                print(f"Dataset '{key}' is already small ({dataset.shape[0]} samples). Subsetting is skipped.")
+            else:
+                print(f"Subsetting '{key}' dataset to {num_samples} samples.")
+                datasets[key] = dataset.sample(n=num_samples).reset_index(drop=True)
+
+        # Update variables after subsetting
+        tr_data, vl_data = datasets["Train"], datasets["Validation"]
 
     # Show data in debug mode
     if train_debug:
@@ -301,11 +304,7 @@ def run(params: Dict):
         print("VAL DATA:")
         print(vl_data.head())
         print(vl_data.shape)
-        print("")
-        print("TEST DATA:")        
-        print(ts_data.head())
-        print(ts_data.shape)
-        print("")
+
 
     # Identify the Feature Sets from DataFrame
     num_ge_columns = len([col for col in tr_data.columns if col.startswith('ge')])
@@ -317,8 +316,6 @@ def run(params: Dict):
     y_train = tr_data.iloc[:, 0].to_numpy()
     x_val = vl_data.iloc[:, 1:].to_numpy()
     y_val = vl_data.iloc[:, 0].to_numpy()
-    x_test = ts_data.iloc[:, 1:].to_numpy()
-    y_test = ts_data.iloc[:, 0].to_numpy()
 
     # Slice the input tensor
     all_input = Input(shape=(num_ge_columns + num_md_columns,), name="all_input")
@@ -367,7 +364,6 @@ def run(params: Dict):
     steps_per_epoch = int(np.ceil(len(x_train) / batch_size))
     train_steps = int(np.ceil(len(x_train) / generator_batch_size))
     validation_steps = int(np.ceil(len(x_val) / generator_batch_size))
-    test_steps = int(np.ceil(len(x_test) / generator_batch_size))
 
 
     # Instantiate callbacks
@@ -446,7 +442,6 @@ def run(params: Dict):
     # Batch prediction (and flatten inside function)
     # Make sure to make new generator state so no index problem
     val_pred, val_true = batch_predict(model, data_generator(x_val, y_val, generator_batch_size), validation_steps)
-    test_pred, test_true = batch_predict(model, data_generator(x_test, y_test, generator_batch_size), test_steps)
 
 
     # ------------------------------------------------------
@@ -473,24 +468,6 @@ def run(params: Dict):
         outdir=params["model_outdir"],
         metrics=metrics_list,
     )
-
-    """Uncomment this if you want to compute test scores as well."""
-    # # Make sure test scores don't contain NANs
-    # test_pred_clean, test_true_clean = clean_arrays(test_pred, test_true)
-    # if train_debug:
-    #     check_array(test_pred_clean)
-
-    # # Compute test scores
-    # test_scores = frm.compute_performace_scores(
-    #     params,
-    #     y_true=test_true_clean,
-    #     y_pred=test_pred_clean,
-    #     stage="test",
-    #     outdir=params["model_outdir"],
-    #     metrics=metrics_list,
-    # )
-
-    # return
 
 
 # [Req]
