@@ -20,15 +20,7 @@ from params import app_preproc_params, model_preproc_params, app_train_params, m
 # Import custom made functions
 from uno_utils_improve import data_generator, batch_predict, print_duration, clean_arrays, check_array
 
-# Configure GPUs
-# gpus = tf.config.experimental.list_physical_devices('GPU')
-# print(tf.config.experimental.list_physical_devices('GPU'))
-# if gpus:
-#     try:
-#         for gpu in gpus:
-#             tf.config.experimental.set_memory_growth(gpu, True)
-#     except RuntimeError as e:
-#         print(e)
+# Model imports
 from keras.models import Model
 from keras.layers import Input, Dense, Concatenate, Dropout, Lambda
 from sklearn.metrics import r2_score
@@ -39,6 +31,7 @@ from tensorflow.keras.callbacks import (
     EarlyStopping,
 )
 
+# Check tensorflow and GPU
 print("Tensorflow Version:")
 print(tf.__version__)
 print(tf.config.list_physical_devices('GPU'))
