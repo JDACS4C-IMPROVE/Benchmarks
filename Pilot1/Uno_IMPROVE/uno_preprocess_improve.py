@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Union
 from uno_utils_improve import print_duration
 
-# Dependencies: pandas, numpy, joblib, scikit-learn
+# Script Dependencies: pandas, numpy, joblib, scikit-learn
 
 # [Req] Import params
 from params import app_preproc_params, model_preproc_params, app_train_params, model_train_params

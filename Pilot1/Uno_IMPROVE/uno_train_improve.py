@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 from typing import Dict
 
+# Script Dependencies: pandas, numpy, tensorflow
+
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -479,22 +481,23 @@ def run(params: Dict):
         metrics=metrics_list,
     )
 
-    # Make sure test scores don't contain NANs
-    test_pred_clean, test_true_clean = clean_arrays(test_pred, test_true)
-    if train_debug:
-        check_array(test_pred_clean)
+    """Uncomment this if you want to compute test scores as well."""
+    # # Make sure test scores don't contain NANs
+    # test_pred_clean, test_true_clean = clean_arrays(test_pred, test_true)
+    # if train_debug:
+    #     check_array(test_pred_clean)
 
-    # Compute test scores
-    test_scores = frm.compute_performace_scores(
-        params,
-        y_true=test_true_clean,
-        y_pred=test_pred_clean,
-        stage="test",
-        outdir=params["model_outdir"],
-        metrics=metrics_list,
-    )
+    # # Compute test scores
+    # test_scores = frm.compute_performace_scores(
+    #     params,
+    #     y_true=test_true_clean,
+    #     y_pred=test_pred_clean,
+    #     stage="test",
+    #     outdir=params["model_outdir"],
+    #     metrics=metrics_list,
+    # )
 
-    return
+    # return
 
 
 # [Req]
