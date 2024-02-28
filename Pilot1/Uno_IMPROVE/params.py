@@ -173,6 +173,12 @@ model_train_params = [
         "help": "Optimizer for gradient descent.",
     },
     {
+        "name": "regression_activation",
+        "type": str,
+        "default": "sigmoid",
+        "help": "Output activation function since target is [0,1]",
+    },
+    {
         "name": "loss",
         "type": str,
         "default": "mse",
