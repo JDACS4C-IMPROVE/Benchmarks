@@ -18,14 +18,23 @@ from improve import framework as frm
 from params import app_preproc_params, model_preproc_params, app_train_params, model_train_params
 
 # Import custom made functions
-from uno_utils_improve import data_generator, batch_predict, print_duration, clean_arrays, check_array
+from uno_utils_improve import (
+    data_generator, 
+    batch_predict, 
+    print_duration, 
+    get_optimizer,
+    subset_data,
+    calculate_sstot,
+    R2Callback_efficient, 
+    R2Callback_accurate, 
+    warmup_scheduler,
+    clean_arrays, check_array
+)
 
 # Model imports
 from keras.models import Model
 from keras.layers import Input, Dense, Concatenate, Dropout, Lambda
-from sklearn.metrics import r2_score
 from tensorflow.keras.callbacks import (
-    Callback,
     ReduceLROnPlateau,
     LearningRateScheduler,
     EarlyStopping,
@@ -65,91 +74,6 @@ train_params = app_train_params + model_train_params
 # [Req] List of metrics names to compute prediction performance scores
 metrics_list = ["mse", "rmse", "pcc", "scc", "r2"]
 
-
-def warmup_scheduler(epoch, lr, warmup_epochs, initial_lr, max_lr, warmup_type):
-    if epoch <= warmup_epochs:
-        if warmup_type == "none" or warmup_type == "constant":
-            lr = max_lr
-        elif warmup_type == "linear":
-            lr = initial_lr + (max_lr - initial_lr) * epoch / warmup_epochs
-        elif warmup_type == "quadratic":
-            lr = initial_lr + (max_lr - initial_lr) * ((epoch / warmup_epochs) ** 2)
-        elif warmup_type == "exponential":
-            lr = initial_lr * ((max_lr / initial_lr) ** (epoch / warmup_epochs))
-        else:
-            raise ValueError("Invalid warmup type")
-    return float(lr)  # Ensure returning a float value
-
-
-def calculate_sstot(y):
-    """
-    Calculate the total sum of squares (SStot) using a NumPy array.
-
-    :param y: NumPy array of observed values.
-    :return: Total sum of squares (SStot).
-    """
-    # Calculate the mean of the observed values
-    y_mean = np.mean(y)
-
-    # Calculate the total sum of squares
-    sstot = np.sum((y - y_mean) ** 2)
-
-    return sstot
-
-
-class R2Callback(Callback):
-    def __init__(self, model, r2_train_generator, r2_val_generator, train_steps, validation_steps, sstot_train, sstot_val, train_debug=False):
-        super().__init__()
-        self.model = model
-        self.train_generator = r2_train_generator
-        self.val_generator = r2_val_generator
-        self.train_steps = train_steps
-        self.validation_steps = validation_steps
-        self.sstot_train = sstot_train
-        self.sstot_val = sstot_val
-        self.train_debug = train_debug
-
-    def on_epoch_end(self, epoch, logs=None):
-        # print("R2 Start")
-        r2_train = self.compute_r2(self.train_generator, self.train_steps, self.sstot_train, self.train_debug)
-        r2_val = self.compute_r2(self.val_generator, self.validation_steps, self.sstot_val, self.train_debug)
-        logs["r2_train"] = r2_train
-        logs["r2_val"] = r2_val
-        # print("R2 End")
-
-    def compute_r2(self, data_generator, steps, sstot, train_debug):
-        y_pred, y_true = batch_predict(self.model, data_generator, steps)
-        ssres = np.sum((y_true - y_pred) ** 2)
-        r2 = 1 - (ssres / sstot)
-        if train_debug:
-            print("\n R2 Calculation:")
-            print(f"y_pred Size: {len(y_pred)}")
-            print(f"y_true Size: {len(y_true)}")
-            print(f"SSres Check: {ssres}")
-            print(f"SStot Check: {sstot}")
-        return r2
-
-
-def get_optimizer(optimizer_name, initial_lr):
-    if optimizer_name == "Adam":
-        return tf.keras.optimizers.Adam(learning_rate=initial_lr)
-    elif optimizer_name == "SGD":
-        return tf.keras.optimizers.SGD(learning_rate=initial_lr)
-    elif optimizer_name == "RMSprop":
-        return tf.keras.optimizers.RMSprop(learning_rate=initial_lr)
-    elif optimizer_name == "Adagrad":
-        return tf.keras.optimizers.Adagrad(learning_rate=initial_lr)
-    elif optimizer_name == "Adadelta":
-        return tf.keras.optimizers.Adadelta(learning_rate=initial_lr)
-    elif optimizer_name == "Adamax":
-        return tf.keras.optimizers.Adamax(learning_rate=initial_lr)
-    elif optimizer_name == "Nadam":
-        return tf.keras.optimizers.Nadam(learning_rate=initial_lr)
-    elif optimizer_name == "Ftrl":
-        return tf.keras.optimizers.Ftrl(learning_rate=initial_lr)
-    else:
-        raise ValueError(f"Optimizer '{optimizer_name}' is not recognized")
-    
 
 def read_architecture(params, hyperparam_space, arch_type):
     # Setup the architecture for cancer, drug, and interaction layers.
@@ -219,12 +143,12 @@ def run(params: Dict):
     batch_size = params["batch_size"]
     generator_batch_size = params["generator_batch_size"]
     raw_max_lr = params["raw_max_lr"]
-    raw_min_lr = raw_max_lr / 1000
+    raw_min_lr = raw_max_lr / 10000
     max_lr = raw_max_lr * batch_size
     min_lr = raw_min_lr * batch_size
     warmup_epochs = params["warmup_epochs"]
     warmup_type = params["warmup_type"]
-    initial_lr = raw_max_lr / 1000
+    initial_lr = raw_max_lr / 100
     reduce_lr_factor = params["reduce_lr_factor"]
     reduce_lr_patience = params["reduce_lr_patience"]
     early_stopping_patience = params["early_stopping_patience"]
@@ -275,25 +199,14 @@ def run(params: Dict):
     tr_data = pd.read_parquet(Path(params["train_ml_data_dir"])/train_data_fname)
     vl_data = pd.read_parquet(Path(params["val_ml_data_dir"])/val_data_fname)
 
-    # Subsetting the data for faster training (debugging)
+    # Subset if setting true (for testing)
     if train_subset_data:
-        # Define total number of samples to subset (or all for small datasets)
+        # Define the total number of samples and the proportions for each stage
         total_num_samples = 5000
-        dataset_proportions = {"Train": 0.8, "Validation": 0.1}
-        datasets = {"Train": tr_data, "Validation": vl_data}  # Use a dictionary to store datasets
-
-        for key, dataset in datasets.items():
-            proportion = dataset_proportions[key]
-            num_samples = int(total_num_samples * proportion)
-            
-            if num_samples >= dataset.shape[0]:
-                print(f"Dataset '{key}' is already small ({dataset.shape[0]} samples). Subsetting is skipped.")
-            else:
-                print(f"Subsetting '{key}' dataset to {num_samples} samples.")
-                datasets[key] = dataset.sample(n=num_samples).reset_index(drop=True)
-
-        # Update variables after subsetting
-        tr_data, vl_data = datasets["Train"], datasets["Validation"]
+        stage_proportions = {"train": 0.8, "val": 0.1, "test": 0.1}   # should represent proportions given
+        # Shuffle with num_samples set by total and stage
+        tr_rsp = subset_data(tr_rsp, "Train", total_num_samples, stage_proportions)
+        vl_rsp = subset_data(vl_rsp, "Validation", total_num_samples, stage_proportions)
 
     # Show data in debug mode
     if train_debug:
@@ -346,7 +259,7 @@ def run(params: Dict):
         )
 
     # Final output layer
-    output = Dense(1, activation=regression_activation)(interaction_encoded)  # A single continuous value such as AUC
+    output = Dense(1, activation=regression_activation)(interaction_encoded)
 
     # Compile Model
     model = Model(inputs=all_input, outputs=output)
@@ -354,6 +267,7 @@ def run(params: Dict):
         optimizer=optimizer,
         loss="mean_squared_error",
     )
+
     # Observe model if debugging mode
     if train_debug:
         model.summary()
@@ -362,7 +276,6 @@ def run(params: Dict):
     # Number of batches for data loading and callbacks
     # steps_per_epoch is for grad descent batches while train_steps is for r2_train
     steps_per_epoch = int(np.ceil(len(x_train) / batch_size))
-    train_steps = int(np.ceil(len(x_train) / generator_batch_size))
     validation_steps = int(np.ceil(len(x_val) / generator_batch_size))
 
 
@@ -392,22 +305,17 @@ def run(params: Dict):
         restore_best_weights=True,
     )
 
-    # R2
-    sstot_train = calculate_sstot(y_train)
-    sstot_val = calculate_sstot(y_val)
-    # Create generators to calculate r2
-    r2_train_gen = data_generator(x_train, y_train, generator_batch_size)
-    r2_val_gen = data_generator(x_val, y_val, generator_batch_size)
-    # Initialize R2Callback with generators
-    r2_callback = R2Callback(
-        model=model,
-        r2_train_generator=r2_train_gen,
-        r2_val_generator=r2_val_gen,
-        train_steps=train_steps,
-        validation_steps=validation_steps,
-        sstot_train=sstot_train,
-        sstot_val=sstot_val,
-        train_debug=train_debug
+
+    # R2 (efficient or accurate)
+
+    # Calculate ss_tot for r2
+    train_ss_tot = calculate_sstot(y_train)
+    val_ss_tot = calculate_sstot(y_val)
+
+    # Efficient (calculated through epoch) (averaging errors with smaller last batch)
+    r2_callback= R2Callback_efficient(
+        train_ss_tot=train_ss_tot,
+        val_ss_tot=val_ss_tot
     )
 
 
@@ -415,8 +323,8 @@ def run(params: Dict):
 
 
     # Make separate generators for training (fixing index issue)
-    train_gen = data_generator(x_train, y_train, batch_size, shuffle=True, peek=True)
-    val_gen = data_generator(x_val, y_val, generator_batch_size, peek=True)
+    train_gen = data_generator(x_train, y_train, batch_size, shuffle=True, peek=True, verbose=False)
+    val_gen = data_generator(x_val, y_val, generator_batch_size, shuffle=False, verbose=False)
 
     # Fit model
     history = model.fit(
@@ -443,6 +351,8 @@ def run(params: Dict):
     # Make sure to make new generator state so no index problem
     val_pred, val_true = batch_predict(model, data_generator(x_val, y_val, generator_batch_size), validation_steps)
 
+    check_array(val_pred)
+    check_array(val_true)
 
     # ------------------------------------------------------
     # [Req] Save raw predictions in dataframe

@@ -18,13 +18,23 @@ from improve import framework as frm
 from params import app_preproc_params, model_preproc_params, app_train_params, model_train_params
 
 # Import custom made functions
-from uno_utils_improve import data_generator, batch_predict, print_duration, get_optimizer, subset_data, check_array
+from uno_utils_improve import (
+    data_merge_generator, 
+    batch_predict, 
+    print_duration, 
+    get_optimizer,
+    subset_data,
+    calculate_sstot, 
+    R2Callback_efficient, 
+    R2Callback_accurate, 
+    warmup_scheduler,
+    clean_arrays, check_array
+)
 
 # Model imports
 from keras.models import Model
 from keras.layers import Input, Dense, Concatenate, Dropout, Lambda
 from tensorflow.keras.callbacks import (
-    Callback,
     ReduceLROnPlateau,
     LearningRateScheduler,
     EarlyStopping,
@@ -49,8 +59,11 @@ filepath = Path(__file__).resolve().parent  # [Req]
   - power_yj scaler that is made from a different cross-study dataset can cause NaNs from exploding
     or vanishing gradients. This is because the power_yj scaler is not robust to extreme values and
     requires cleaning of the array before storing test scores.
-  - Incorporate R2 calculation into the normal loss calculation? How it's done right now requires
-    loading and predicting the entire dataset again, which is not efficient.
+  - When merging data where the index is that is merged on can be the same, there can be some shuffling
+    of the rows. This is why care needs to be taken when generating the stored predictions.
+  - The R2 callback currently either: (1) Is very inefficient and requires an entire loop through the
+    dataset each calculation or (2) Is off by a substantial amount because of the batch calculation/
+    averaging logic going on in tensorflow models. Specifically with the calculation of y_mean.
 """
 
 # ---------------------
@@ -64,43 +77,6 @@ train_params = app_train_params + model_train_params
 # [Req] List of metrics names to compute prediction performance scores
 metrics_list = ["mse", "rmse", "pcc", "scc", "r2"]
 
-
-def warmup_scheduler(epoch, lr, warmup_epochs, initial_lr, max_lr, warmup_type):
-    if epoch <= warmup_epochs:
-        if warmup_type == "none" or warmup_type == "constant":
-            lr = max_lr
-        elif warmup_type == "linear":
-            lr = initial_lr + (max_lr - initial_lr) * epoch / warmup_epochs
-        elif warmup_type == "quadratic":
-            lr = initial_lr + (max_lr - initial_lr) * ((epoch / warmup_epochs) ** 2)
-        elif warmup_type == "exponential":
-            lr = initial_lr * ((max_lr / initial_lr) ** (epoch / warmup_epochs))
-        else:
-            raise ValueError("Invalid warmup type")
-    return float(lr)  # Ensure returning a float value
-
-
-def ss_res(y_true, y_pred):
-    return tf.reduce_sum(tf.square(y_true - y_pred))
-
-def ss_tot(y_true, y_pred):
-    return tf.reduce_sum(tf.square(y_true - tf.reduce_mean(y_true)))
-
-class R2Callback(Callback):
-    def on_epoch_end(self, epoch, logs=None):
-        train_ss_res = logs.get('ss_res')  # Assuming 'ss_res' is the key for training SS_res
-        train_ss_tot = logs.get('ss_tot')  # Assuming 'ss_tot' is the key for training SS_tot
-        val_ss_res = logs.get('val_ss_res')  # For validation SS_res
-        val_ss_tot = logs.get('val_ss_tot')  # For validation SS_tot
-
-        # Compute R2 for training
-        train_r2 = 1 - (train_ss_res / train_ss_tot) if train_ss_tot != 0 else float(0)  # Avoid division by zero
-
-        # Compute R2 for validation
-        val_r2 = 1 - (val_ss_res / val_ss_tot) if val_ss_tot != 0 else float(0)  # Avoid division by zero
-
-        print(f'\n Epoch: {epoch + 1}, Train R2: {train_r2}, Val R2: {val_r2} \n')
-    
 
 def read_architecture(params, hyperparam_space, arch_type):
     # Setup the architecture for cancer, drug, and interaction layers.
@@ -302,8 +278,8 @@ def run(params: Dict):
     model.compile(
         optimizer=optimizer,
         loss="mean_squared_error",
-        metrics=[ss_res, ss_tot]
     )
+
     # Observe model if debugging mode
     if train_debug:
         model.summary()
@@ -311,7 +287,7 @@ def run(params: Dict):
 
     # Number of batches for data loading and callbacks
     steps_per_epoch = int(np.ceil(len(tr_rsp) / batch_size))
-    validation_steps = int(np.ceil(len(vl_rsp) / generator_batch_size))
+    validation_steps = int(np.ceil(len(vl_rsp) / batch_size))
 
 
     # Instantiate callbacks
@@ -340,15 +316,24 @@ def run(params: Dict):
         restore_best_weights=True,
     )
 
-    # R2 Metric
-    r2_callback = R2Callback()
+    # R2 (efficient or accurate)
+
+    # Calculate ss_tot for r2
+    train_ss_tot = calculate_sstot(tr_rsp[params["y_col_name"]])
+    val_ss_tot = calculate_sstot(vl_rsp[params["y_col_name"]])
+
+    # Efficient (calculated through epoch) (averaging errors with smaller last batch)
+    r2_callback= R2Callback_efficient(
+        train_ss_tot=train_ss_tot,
+        val_ss_tot=val_ss_tot
+    )
 
 
     epoch_start_time = time.time()
 
     # Make separate generators for training and val (fixing peeking index issue)
-    train_gen = data_generator(tr_ge, tr_md, tr_rsp, batch_size, params, shuffle=True, peek=True)
-    val_gen = data_generator(vl_ge, vl_md, vl_rsp, batch_size, params, shuffle=False, peek=True)
+    train_gen = data_merge_generator(tr_rsp, tr_ge, tr_md, batch_size, params, shuffle=True, peek=True)
+    val_gen = data_merge_generator(vl_rsp, vl_ge, vl_md, batch_size, params, shuffle=False, peek=True)
 
     # Fit model
     history = model.fit(
@@ -373,16 +358,18 @@ def run(params: Dict):
 
     # Batch prediction (and flatten inside function)
     # Make sure to make new generator state so no index problem
-    train_pred, train_true = batch_predict(
-        model, 
-        data_generator(tr_ge, tr_md, tr_rsp, generator_batch_size, params, verbose=False), 
-        validation_steps
-    )
+
+    check_array(np.array(tr_rsp[params["y_col_name"]]))
+    check_array(np.array(vl_rsp[params["y_col_name"]]))
+
     val_pred, val_true = batch_predict(
         model, 
-        data_generator(vl_ge, vl_md, vl_rsp, generator_batch_size, params, merge_preserve_order=True, verbose=False), 
+        data_merge_generator(vl_rsp, vl_ge, vl_md, generator_batch_size, params, merge_preserve_order=True, verbose=False), 
         validation_steps
     )
+
+    check_array(val_pred)
+    check_array(val_true)
 
     # ------------------------------------------------------
     # [Req] Save raw predictions in dataframe
