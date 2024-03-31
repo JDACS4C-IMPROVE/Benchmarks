@@ -225,7 +225,7 @@ def run(params: Dict):
         print(textwrap.dedent(f"""
             Gene Expression Shape Before Subsetting With Response: {ge.shape}
             Gene Expression Shape After Subsetting With Response: {ge_sub.shape}
-            Mordred Shape Before MSubsetting With Response: {md.shape}
+            Mordred Shape Before Subsetting With Response: {md.shape}
             Mordred Shape After Subsetting With Response: {md_sub.shape}
             Response Shape Before Merging With Data: {rsp.shape}
             Response Shape After Merging With Data: {rsp_sub.shape}

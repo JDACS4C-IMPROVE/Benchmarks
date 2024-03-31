@@ -148,7 +148,7 @@ def run(params: Dict):
     min_lr = raw_min_lr * batch_size
     warmup_epochs = params["warmup_epochs"]
     warmup_type = params["warmup_type"]
-    initial_lr = raw_max_lr / 100
+    initial_lr = max_lr / 100
     reduce_lr_factor = params["reduce_lr_factor"]
     reduce_lr_patience = params["reduce_lr_patience"]
     early_stopping_patience = params["early_stopping_patience"]
@@ -205,8 +205,8 @@ def run(params: Dict):
         total_num_samples = 5000
         stage_proportions = {"train": 0.8, "val": 0.1, "test": 0.1}   # should represent proportions given
         # Shuffle with num_samples set by total and stage
-        tr_rsp = subset_data(tr_rsp, "Train", total_num_samples, stage_proportions)
-        vl_rsp = subset_data(vl_rsp, "Validation", total_num_samples, stage_proportions)
+        tr_data = subset_data(tr_data, "Train", total_num_samples, stage_proportions)
+        vl_data = subset_data(vl_data, "Validation", total_num_samples, stage_proportions)
 
     # Show data in debug mode
     if train_debug:
@@ -350,9 +350,7 @@ def run(params: Dict):
     # Batch prediction (and flatten inside function)
     # Make sure to make new generator state so no index problem
     val_pred, val_true = batch_predict(model, data_generator(x_val, y_val, generator_batch_size), validation_steps)
-
-    check_array(val_pred)
-    check_array(val_true)
+    
 
     # ------------------------------------------------------
     # [Req] Save raw predictions in dataframe

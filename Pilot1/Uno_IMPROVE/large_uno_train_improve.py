@@ -151,7 +151,7 @@ def run(params: Dict):
     min_lr = raw_min_lr * batch_size
     warmup_epochs = params["warmup_epochs"]
     warmup_type = params["warmup_type"]
-    initial_lr = raw_max_lr / 100
+    initial_lr = max_lr / 100
     reduce_lr_factor = params["reduce_lr_factor"]
     reduce_lr_patience = params["reduce_lr_patience"]
     early_stopping_patience = params["early_stopping_patience"]
@@ -287,7 +287,7 @@ def run(params: Dict):
 
     # Number of batches for data loading and callbacks
     steps_per_epoch = int(np.ceil(len(tr_rsp) / batch_size))
-    validation_steps = int(np.ceil(len(vl_rsp) / batch_size))
+    validation_steps = int(np.ceil(len(vl_rsp) / generator_batch_size))
 
 
     # Instantiate callbacks
@@ -333,7 +333,7 @@ def run(params: Dict):
 
     # Make separate generators for training and val (fixing peeking index issue)
     train_gen = data_merge_generator(tr_rsp, tr_ge, tr_md, batch_size, params, shuffle=True, peek=True)
-    val_gen = data_merge_generator(vl_rsp, vl_ge, vl_md, batch_size, params, shuffle=False, peek=True)
+    val_gen = data_merge_generator(vl_rsp, vl_ge, vl_md, generator_batch_size, params, shuffle=False, peek=True)
 
     # Fit model
     history = model.fit(
@@ -359,17 +359,12 @@ def run(params: Dict):
     # Batch prediction (and flatten inside function)
     # Make sure to make new generator state so no index problem
 
-    check_array(np.array(tr_rsp[params["y_col_name"]]))
-    check_array(np.array(vl_rsp[params["y_col_name"]]))
-
     val_pred, val_true = batch_predict(
         model, 
         data_merge_generator(vl_rsp, vl_ge, vl_md, generator_batch_size, params, merge_preserve_order=True, verbose=False), 
         validation_steps
     )
-
-    check_array(val_pred)
-    check_array(val_true)
+    
 
     # ------------------------------------------------------
     # [Req] Save raw predictions in dataframe
